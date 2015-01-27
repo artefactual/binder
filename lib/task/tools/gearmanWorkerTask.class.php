@@ -57,92 +57,99 @@ EOF;
     // Unset default net_gearman prefix for jobs
     define('NET_GEARMAN_JOB_CLASS_PREFIX', '');
 
-    try
-    {
-      // Connect this worker to gearmand
-      $worker = new Net_Gearman_Worker(array('localhost:4730'));
+    // Connect this worker to gearmand
+    $worker = new Net_Gearman_Worker(array('localhost:4730'));
 
-      // Register abilities (jobs)
-      foreach (array('qtSwordPluginWorker', 'arUpdateArtworkWorker') as $item)
+    // Register abilities (jobs)
+    foreach (array('qtSwordPluginWorker', 'arUpdateArtworkWorker') as $item)
+    {
+      $worker->addAbility($item);
+
+      $this->logSection('gearman-worker', 'New ability: '.$item);
+    }
+
+    $worker->attachCallback(
+      function($handle, $job, $e)
       {
-        $worker->addAbility($item);
+        $this->logSection('gearman-worker', "​Job failed: ".$e->getMessage());
+      },
+      Net_Gearman_Worker::JOB_FAIL);
 
-        $this->logSection('gearman-worker', 'New ability: '.$item);
-      }
+    $this->logSection('gearman-worker', 'Running worker...');
+    $this->logSection('gearman-worker', 'PID '.getmypid());
 
-      $this->logSection('gearman-worker', 'Running worker...');
-      $this->logSection('gearman-worker', 'PID '.getmypid());
+    $counter = 0;
+    $storedLastJob = null;
 
-      $counter = 0;
-      $storedLastJob = null;
-
-      // The worker loop!
-      $worker->beginWork(
-        // Pass a callback that pings the database every ~30 seconds
-        // in order to keep the connection alive. AtoM connects to MySQL in a
-        // persistent way that timeouts when running the worker for a long time.
-        // Another option would be to catch the ProperException from the worker
-        // and restablish the connection when needed. Also, the persistent mode
-        // could be disabled for this worker. See issue #4182.
-        // If a new job has been executed: clear cache of all classes and save ES
-        // documents in the batch queue (we need to call the magic method explictly
-        // because the object isn't destroyed in a worker)
-        function($idle, $lastJob) use (&$counter, &$storedLastJob)
+    // The worker loop!
+    $worker->beginWork(
+      // Pass a callback that pings the database every ~30 seconds
+      // in order to keep the connection alive. AtoM connects to MySQL in a
+      // persistent way that timeouts when running the worker for a long time.
+      // Another option would be to catch the ProperException from the worker
+      // and restablish the connection when needed. Also, the persistent mode
+      // could be disabled for this worker. See issue #4182.
+      // If a new job has been executed: clear cache of all classes and save ES
+      // documents in the batch queue (we need to call the magic method explictly
+      // because the object isn't destroyed in a worker)
+      function($idle, $lastJob) use (&$counter, &$storedLastJob)
+      {
+        if ($storedLastJob != $lastJob)
         {
-          if ($storedLastJob != $lastJob)
-          {
-            $storedLastJob = $lastJob;
+          $storedLastJob = $lastJob;
 
+          try
+          {
             QubitSearch::getInstance()->__destruct();
-
-            foreach (array(
-              'QubitAccessLog',
-              'QubitActorI18n',
-              'QubitContactInformation',
-              'QubitContactInformationI18n',
-              'QubitEventI18n',
-              'QubitFunctionI18n',
-              'QubitInformationObjectI18n',
-              'QubitKeymap',
-              'QubitMenu',
-              'QubitMenuI18n',
-              'QubitNote',
-              'QubitNoteI18n',
-              'QubitOaiHarvest',
-              'QubitOaiRepository',
-              'QubitObject',
-              'QubitOtherName',
-              'QubitOtherNameI18n',
-              'QubitPhysicalObjectI18n',
-              'QubitProperty',
-              'QubitPropertyI18n',
-              'QubitRelationI18n',
-              'QubitRepositoryI18n',
-              'QubitRightsI18n',
-              'QubitSetting',
-              'QubitSettingI18n',
-              'QubitSlug',
-              'QubitStaticPageI18n',
-              'QubitStatus',
-              'QubitTaxonomyI18n',
-              'QubitTermI18n') as $className)
-            {
-              $className::clearCache();
-            }
           }
-
-          if (30 == $counter++)
+          catch (Exception $e)
           {
-            $counter = 0;
-
-            QubitPdo::prepareAndExecute('SELECT 1');
+            $this->logSection('gearman-worker', 'Error updating the ES index:  '.$e->getMessage());
           }
-        });
-    }
-    catch (Net_Gearman_Exception $e)
-    {
-      throw $e;
-    }
+
+          foreach (array(
+            'QubitAccessLog',
+            'QubitActorI18n',
+            'QubitContactInformation',
+            'QubitContactInformationI18n',
+            'QubitEventI18n',
+            'QubitFunctionI18n',
+            'QubitInformationObjectI18n',
+            'QubitKeymap',
+            'QubitMenu',
+            'QubitMenuI18n',
+            'QubitNote',
+            'QubitNoteI18n',
+            'QubitOaiHarvest',
+            'QubitOaiRepository',
+            'QubitObject',
+            'QubitOtherName',
+            'QubitOtherNameI18n',
+            'QubitPhysicalObjectI18n',
+            'QubitProperty',
+            'QubitPropertyI18n',
+            'QubitRelationI18n',
+            'QubitRepositoryI18n',
+            'QubitRightsI18n',
+            'QubitSetting',
+            'QubitSettingI18n',
+            'QubitSlug',
+            'QubitStaticPageI18n',
+            'QubitStatus',
+            'QubitTaxonomyI18n',
+            'QubitTermI18n') as $className)
+          {
+            $className::clearCache();
+          }
+        }
+
+        if (30 == $counter++)
+        {
+          $counter = 0;
+
+          QubitPdo::prepareAndExecute('SELECT 1');
+        }
+      });
   }
 
   public function gearmanWorkerLogger(sfEvent $event)

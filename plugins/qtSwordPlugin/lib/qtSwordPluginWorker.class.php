@@ -35,7 +35,7 @@ class qtSwordPluginWorker extends Net_Gearman_Job_Common
 
     if (!is_writable(sfConfig::get('sf_web_dir').DIRECTORY_SEPARATOR.sfConfig::get('app_upload_dir')))
     {
-      throw new sfException('ERROR: Read-write access needed in {sf_web_dir}/{app_upload_dir}!');
+      throw new Net_Gearman_Job_Exception('Read-write access needed in {sf_web_dir}/{app_upload_dir}!');
     }
 
     if (isset($package['location']))
