@@ -43,13 +43,16 @@ INNER JOIN information_object_i18n io18n
 LEFT JOIN digital_object
   ON io.id = digital_object.information_object_id
 WHERE
-  io.level_of_description_id = ?
+  (io.level_of_description_id = ? OR io.level_of_description_id = ?)
 ORDER BY
   aip.created_at DESC
 LIMIT 20;
 EOL;
 
-    $results = QubitPdo::fetchAll($sql, array(sfConfig::get('app_drmc_lod_artwork_record_id')));
+    $results = QubitPdo::fetchAll($sql, array(
+      sfConfig::get('app_drmc_lod_artwork_record_id'),
+      sfConfig::get('app_drmc_lod_supporting_technology_record_id')
+    ));
 
     if (false === $results)
     {
