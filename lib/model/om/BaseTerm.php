@@ -109,6 +109,11 @@ abstract class BaseTerm extends QubitObject implements ArrayAccess
     {
     }
 
+    if ('accessLogs' == $name)
+    {
+      return true;
+    }
+
     if ('actorsRelatedByentityTypeId' == $name)
     {
       return true;
@@ -234,6 +239,11 @@ abstract class BaseTerm extends QubitObject implements ArrayAccess
       return true;
     }
 
+    if ('savedQuerys' == $name)
+    {
+      return true;
+    }
+
     if ('statussRelatedBytypeId' == $name)
     {
       return true;
@@ -321,6 +331,23 @@ abstract class BaseTerm extends QubitObject implements ArrayAccess
     }
     catch (sfException $e)
     {
+    }
+
+    if ('accessLogs' == $name)
+    {
+      if (!isset($this->refFkValues['accessLogs']))
+      {
+        if (!isset($this->id))
+        {
+          $this->refFkValues['accessLogs'] = QubitQuery::create();
+        }
+        else
+        {
+          $this->refFkValues['accessLogs'] = self::getaccessLogsById($this->id, array('self' => $this) + $options);
+        }
+      }
+
+      return $this->refFkValues['accessLogs'];
     }
 
     if ('actorsRelatedByentityTypeId' == $name)
@@ -748,6 +775,23 @@ abstract class BaseTerm extends QubitObject implements ArrayAccess
       return $this->refFkValues['rightssRelatedBycopyrightStatusId'];
     }
 
+    if ('savedQuerys' == $name)
+    {
+      if (!isset($this->refFkValues['savedQuerys']))
+      {
+        if (!isset($this->id))
+        {
+          $this->refFkValues['savedQuerys'] = QubitQuery::create();
+        }
+        else
+        {
+          $this->refFkValues['savedQuerys'] = self::getsavedQuerysById($this->id, array('self' => $this) + $options);
+        }
+      }
+
+      return $this->refFkValues['savedQuerys'];
+    }
+
     if ('statussRelatedBytypeId' == $name)
     {
       if (!isset($this->refFkValues['statussRelatedBytypeId']))
@@ -1124,6 +1168,26 @@ abstract class BaseTerm extends QubitObject implements ArrayAccess
     $criteria->addJoin(QubitTerm::PARENT_ID, QubitTerm::ID);
 
     return $criteria;
+  }
+
+  public static function addaccessLogsCriteriaById(Criteria $criteria, $id)
+  {
+    $criteria->add(QubitAccessLog::TYPE_ID, $id);
+
+    return $criteria;
+  }
+
+  public static function getaccessLogsById($id, array $options = array())
+  {
+    $criteria = new Criteria;
+    self::addaccessLogsCriteriaById($criteria, $id);
+
+    return QubitAccessLog::get($criteria, $options);
+  }
+
+  public function addaccessLogsCriteria(Criteria $criteria)
+  {
+    return self::addaccessLogsCriteriaById($criteria, $this->id);
   }
 
   public static function addactorsRelatedByentityTypeIdCriteriaById(Criteria $criteria, $id)
@@ -1624,6 +1688,26 @@ abstract class BaseTerm extends QubitObject implements ArrayAccess
   public function addrightssRelatedBycopyrightStatusIdCriteria(Criteria $criteria)
   {
     return self::addrightssRelatedBycopyrightStatusIdCriteriaById($criteria, $this->id);
+  }
+
+  public static function addsavedQuerysCriteriaById(Criteria $criteria, $id)
+  {
+    $criteria->add(QubitSavedQuery::TYPE_ID, $id);
+
+    return $criteria;
+  }
+
+  public static function getsavedQuerysById($id, array $options = array())
+  {
+    $criteria = new Criteria;
+    self::addsavedQuerysCriteriaById($criteria, $id);
+
+    return QubitSavedQuery::get($criteria, $options);
+  }
+
+  public function addsavedQuerysCriteria(Criteria $criteria)
+  {
+    return self::addsavedQuerysCriteriaById($criteria, $this->id);
   }
 
   public static function addstatussRelatedBytypeIdCriteriaById(Criteria $criteria, $id)

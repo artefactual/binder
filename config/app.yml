@@ -9,21 +9,21 @@ all:
   #  Positive integer  => Number of gigabytes
   upload_limit: -1
 
-  # Timeout for fetching digital objects from external services, in seconds
-  download_timeout: 10
-
   # Use sfMemcacheCache if you want a distributed cache.
   # sfAPCCache can do the trick for a single instance (sfAPCuCache in PHP 5.5).
-  cache_engine: sfAPCCache
+  cache_engine:
+    class: sfMemcacheCache
+    param:
+      storeCacheInfo: true
 
   # Enable read only mode
   read_only: false
-
-  # gearmand address
-  gearman_job_server: 127.0.0.1:4730
 
   # Used in the repo template
   # google_maps_api_key: ...
 
   # Google Analitycs
   # google_analytics_api_key: ...
+
+  # Gearman job server (lists are not supported yet)
+  gearman_job_server: 127.0.0.1:4730

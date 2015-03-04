@@ -33,7 +33,6 @@ header #logo {
   margin: 0;
   float: left;
   margin: 6px 0 0 4px;
-  padding-right: 35px;
   a {
     color: @white;
   }
@@ -47,7 +46,6 @@ header #logo {
   span {
     line-height: 24px;
   }
-  .text-overflow();
 }
 
 // Shared class for buttons and dropdowns elements
@@ -177,7 +175,7 @@ nav > div {
 }
 
 #user-menu {
-  > a {
+  a.top-item {
     margin-left: 12px;
   }
   form {
@@ -198,6 +196,7 @@ nav > div {
 
 // Icons
 
+.top-menu-link,
 #quick-links-menu,
 #language-menu,
 #admin-menu,
@@ -354,14 +353,14 @@ nav > div {
 
 @media (max-width: 979px) {
 
-  // Increase height of the bar
+  // Double height of the bar
   #top-bar {
-    height: 150px;
+    height: 100px;
   }
 
   // Hide buttons
   nav {
-    clear: both;
+    .hide();
   }
 
   // Fist row: logo
@@ -376,7 +375,6 @@ nav > div {
     .clearfix();
     margin: 0 auto;
     padding: 0 20px;
-    clear: both;
 
     #search-form-wrapper {
       width: 80%;
@@ -407,67 +405,11 @@ nav > div {
 
 @media (max-width: 767px) {
 
+  // Cancel default responsive body margin
   #top-bar {
     margin: 0 -20px;
-    height: auto;
-    padding-bottom: 10px;
-  }
-
-  #site-name {
-    float: none;
-    text-align: center;
-    margin-top: 0;
-  }
-
-  #site-slogan {
-    margin: 0 -20px;
-    padding: 0 20px;
-  }
-
-  #wrapper {
-    background-image: none;
-  }
-
-  nav {
-    .top-dropdown-container {
-      right: auto;
-      left: 0;
-      .arrow {
-        right: auto;
-        left: 10px;
-      }
-    }
   }
 
 }
 
-@media (max-width: 480px) {
-
-  #browse-menu {
-    width: 3%;
-    &> a {
-      text-indent: -9999px;
-    }
-  }
-
-  nav {
-    clear: both;
-  }
-
-  #search-bar {
-    margin-bottom: 10px;
-  }
-
-  nav > div {
-    &.open {
-      float: none;
-      clear: both;
-    }
-    .top-dropdown-container {
-      clear: both;
-      float: none;
-      left: 0; right: 0;
-    }
-  }
-
-}
+@media (max-width: 480px) { }

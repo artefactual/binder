@@ -37,6 +37,41 @@ class QubitAip extends BaseAip
 
     QubitSearch::getInstance()->update($this);
 
+    // Update part_of artwork in ES
+    if (isset($this->partOf) && null !== $partOf = QubitInformationObject::getById($this->partOf))
+    {
+      QubitSearch::getInstance()->update($partOf);
+    }
+
+    // TODO: Update attached_to and childs
+
     return $this;
+  }
+
+  /**
+   * Additional actions to take on delete
+   *
+   */
+  public function delete($connection = null)
+  {
+    // Physical object relations
+    $relations = QubitRelation::getRelationsBySubjectId($this->id, array('typeId' => QubitTerm::AIP_RELATION_ID));
+    foreach ($relations as $item)
+    {
+      $item->indexObjectOnDelete = false;
+      $item->delete();
+    }
+
+    QubitSearch::getInstance()->delete($this);
+
+    parent::delete($connection);
+  }
+
+  public static function getByUuid($uuid)
+  {
+    $criteria = new Criteria;
+    $criteria->add(QubitAIP::UUID, $uuid);
+
+    return QubitAip::getOne($criteria);
   }
 }
