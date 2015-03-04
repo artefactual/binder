@@ -1,4 +1,4 @@
-<?php echo get_component('default', 'updateCheck') ?>
+<?php // echo get_component('default', 'updateCheck') ?>
 
 <header id="top-bar">
 
