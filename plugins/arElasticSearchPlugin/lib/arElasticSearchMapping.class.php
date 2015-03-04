@@ -27,41 +27,6 @@ class arElasticSearchMapping
   protected $nestedTypes = null;
 
   /**
-   * Associative array that maps iso639-1 language codes to the different
-   * analyzers that have been defined in search.yml for each stopword list
-   * provided by Elasticsearch.
-   */
-  private static $analyzers = array(
-    'ar' => 'std_arabic',
-    'hy' => 'std_armenian',
-    'ba' => 'std_basque',
-    'br' => 'std_brazilian',
-    'bg' => 'std_bulgarian',
-    'ca' => 'std_catalan',
-    'cz' => 'std_czech',
-    'da' => 'std_danish',
-    'nl' => 'std_dutch',
-    'en' => 'std_english',
-    'fi' => 'std_finnish',
-    'fr' => 'std_french',
-    'gl' => 'std_galician',
-    'ge' => 'std_german',
-    'el' => 'std_greek',
-    'hi' => 'std_hindi',
-    'hu' => 'std_hungarian',
-    'id' => 'std_indonesian',
-    'it' => 'std_italian',
-    'no' => 'std_norwegian',
-    'fa' => 'std_persian',
-    'pt' => 'std_portuguese',
-    'ro' => 'std_romanian',
-    'ru' => 'std_russian',
-    'es' => 'std_spanish',
-    'sv' => 'std_swedish',
-    'tr' => 'std_turkish'
-  );
-
-  /**
    * Dumps schema as array
    *
    * @return array
@@ -170,7 +135,7 @@ class arElasticSearchMapping
     // Next iteration to embed nested types
     foreach ($this->mapping as $typeName => &$typeProperties)
     {
-      $this->processForeignTypes($typeProperties);
+      $this->mapping[$typeName] = $this->processForeignTypes($typeProperties);
     }
   }
 
@@ -264,17 +229,6 @@ class arElasticSearchMapping
             }
           }
 
-          if (isset($typeProperties['_attributes']['rawFields']))
-          {
-            foreach ($typeProperties['_attributes']['rawFields'] as $item)
-            {
-              $nestedI18nFields[$item]['fields']['untouched'] = array(
-                'type' => 'string',
-                'index' => 'not_analyzed',
-                'include_in_all' => false);
-            }
-          }
-
           // i18n documents (one per culture)
           $nestedI18nObjects = $this->getNestedI18nObjects($languages, $nestedI18nFields);
 
@@ -321,14 +275,15 @@ class arElasticSearchMapping
   }
 
   /**
-   * Given a mapping, adds other objects within it
+   * Given a mapping, recursively add other objects within it
    */
-  protected function processForeignTypes(array &$typeProperties)
+  protected function processForeignTypes($typeProperties, $maxDepth = 3, $currentDepth = 0)
   {
-    // Stop execution if any foreign type was assigned
-    if (!isset($typeProperties['_foreign_types']))
+    $currentDepth++;
+
+    if ($currentDepth > $maxDepth)
     {
-      return;
+      return $typeProperties;
     }
 
     foreach ($typeProperties['_foreign_types'] as $fieldName => $foreignTypeName)
@@ -341,13 +296,21 @@ class arElasticSearchMapping
         throw new sfException("$foreignTypeName could not be found within the mappings.");
       }
 
-      $mapping = $this->mapping[$foreignTypeNameCamelized];
+      // recurse
+      $mapping = $this->processForeignTypes(
+        $this->mapping[$foreignTypeNameCamelized],
+        $maxDepth,
+        $currentDepth
+      );
 
       // Add id of the foreign resource
       $mapping['properties']['id'] = array('type' => 'integer', 'index' => 'not_analyzed', 'include_in_all' => 'false');
 
       $typeProperties['properties'][$fieldNameCamelized] = $mapping;
     }
+    unset($typeProperties['_foreign_types']);
+
+    return $typeProperties;
   }
 
   /**
@@ -438,13 +401,17 @@ class arElasticSearchMapping
 
   protected function getI18nFieldMapping($fieldName)
   {
-    return array(
-      'type' => 'string',
+    return   array(
+      'type' => 'multi_field',
       'fields' => array(
         $fieldName => array(
           'type' => 'string',
           'index' => 'analyzed',
-          'include_in_all' => true)));
+          'include_in_all' => true),
+        'untouched' => array(
+          'type' => 'string',
+          'index' => 'not_analyzed',
+          'include_in_all' => false)));
   }
 
   protected function getNestedI18nObjects($languages, $nestedI18nFields)
@@ -453,17 +420,6 @@ class arElasticSearchMapping
     foreach ($languages as $setting)
     {
       $culture = $setting->getValue(array('sourceCulture' => true));
-
-      // Iterate each field and assign a custom standard analyzer (e.g.
-      // std_french in search.yml) based in the language being used. The default
-      // analyzer is standard, which does not provide a stopwords list.
-      foreach ($nestedI18nFields as $fn => &$fv)
-      {
-        $analyzer = isset(self::$analyzers[$culture]) ? self::$analyzers[$culture] : 'standard';
-
-        $fv['fields'][$fn]['analyzer'] = $analyzer;
-      }
-
       $mapping[$culture] = array(
         'type' => 'object',
         'dynamic' => 'strict',
