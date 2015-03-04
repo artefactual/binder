@@ -84,17 +84,32 @@ abstract class BaseUser extends QubitActor implements ArrayAccess
     {
     }
 
+    if ('accessLogs' == $name)
+    {
+      return true;
+    }
+
+    if ('fixityRecoverys' == $name)
+    {
+      return true;
+    }
+
+    if ('notes' == $name)
+    {
+      return true;
+    }
+
+    if ('savedQuerys' == $name)
+    {
+      return true;
+    }
+
     if ('aclPermissions' == $name)
     {
       return true;
     }
 
     if ('aclUserGroups' == $name)
-    {
-      return true;
-    }
-
-    if ('notes' == $name)
     {
       return true;
     }
@@ -118,6 +133,74 @@ abstract class BaseUser extends QubitActor implements ArrayAccess
     }
     catch (sfException $e)
     {
+    }
+
+    if ('accessLogs' == $name)
+    {
+      if (!isset($this->refFkValues['accessLogs']))
+      {
+        if (!isset($this->id))
+        {
+          $this->refFkValues['accessLogs'] = QubitQuery::create();
+        }
+        else
+        {
+          $this->refFkValues['accessLogs'] = self::getaccessLogsById($this->id, array('self' => $this) + $options);
+        }
+      }
+
+      return $this->refFkValues['accessLogs'];
+    }
+
+    if ('fixityRecoverys' == $name)
+    {
+      if (!isset($this->refFkValues['fixityRecoverys']))
+      {
+        if (!isset($this->id))
+        {
+          $this->refFkValues['fixityRecoverys'] = QubitQuery::create();
+        }
+        else
+        {
+          $this->refFkValues['fixityRecoverys'] = self::getfixityRecoverysById($this->id, array('self' => $this) + $options);
+        }
+      }
+
+      return $this->refFkValues['fixityRecoverys'];
+    }
+
+    if ('notes' == $name)
+    {
+      if (!isset($this->refFkValues['notes']))
+      {
+        if (!isset($this->id))
+        {
+          $this->refFkValues['notes'] = QubitQuery::create();
+        }
+        else
+        {
+          $this->refFkValues['notes'] = self::getnotesById($this->id, array('self' => $this) + $options);
+        }
+      }
+
+      return $this->refFkValues['notes'];
+    }
+
+    if ('savedQuerys' == $name)
+    {
+      if (!isset($this->refFkValues['savedQuerys']))
+      {
+        if (!isset($this->id))
+        {
+          $this->refFkValues['savedQuerys'] = QubitQuery::create();
+        }
+        else
+        {
+          $this->refFkValues['savedQuerys'] = self::getsavedQuerysById($this->id, array('self' => $this) + $options);
+        }
+      }
+
+      return $this->refFkValues['savedQuerys'];
     }
 
     if ('aclPermissions' == $name)
@@ -154,24 +237,87 @@ abstract class BaseUser extends QubitActor implements ArrayAccess
       return $this->refFkValues['aclUserGroups'];
     }
 
-    if ('notes' == $name)
-    {
-      if (!isset($this->refFkValues['notes']))
-      {
-        if (!isset($this->id))
-        {
-          $this->refFkValues['notes'] = QubitQuery::create();
-        }
-        else
-        {
-          $this->refFkValues['notes'] = self::getnotesById($this->id, array('self' => $this) + $options);
-        }
-      }
-
-      return $this->refFkValues['notes'];
-    }
-
     throw new sfException("Unknown record property \"$name\" on \"".get_class($this).'"');
+  }
+
+  public static function addaccessLogsCriteriaById(Criteria $criteria, $id)
+  {
+    $criteria->add(QubitAccessLog::USER_ID, $id);
+
+    return $criteria;
+  }
+
+  public static function getaccessLogsById($id, array $options = array())
+  {
+    $criteria = new Criteria;
+    self::addaccessLogsCriteriaById($criteria, $id);
+
+    return QubitAccessLog::get($criteria, $options);
+  }
+
+  public function addaccessLogsCriteria(Criteria $criteria)
+  {
+    return self::addaccessLogsCriteriaById($criteria, $this->id);
+  }
+
+  public static function addfixityRecoverysCriteriaById(Criteria $criteria, $id)
+  {
+    $criteria->add(QubitFixityRecovery::USER_ID, $id);
+
+    return $criteria;
+  }
+
+  public static function getfixityRecoverysById($id, array $options = array())
+  {
+    $criteria = new Criteria;
+    self::addfixityRecoverysCriteriaById($criteria, $id);
+
+    return QubitFixityRecovery::get($criteria, $options);
+  }
+
+  public function addfixityRecoverysCriteria(Criteria $criteria)
+  {
+    return self::addfixityRecoverysCriteriaById($criteria, $this->id);
+  }
+
+  public static function addnotesCriteriaById(Criteria $criteria, $id)
+  {
+    $criteria->add(QubitNote::USER_ID, $id);
+
+    return $criteria;
+  }
+
+  public static function getnotesById($id, array $options = array())
+  {
+    $criteria = new Criteria;
+    self::addnotesCriteriaById($criteria, $id);
+
+    return QubitNote::get($criteria, $options);
+  }
+
+  public function addnotesCriteria(Criteria $criteria)
+  {
+    return self::addnotesCriteriaById($criteria, $this->id);
+  }
+
+  public static function addsavedQuerysCriteriaById(Criteria $criteria, $id)
+  {
+    $criteria->add(QubitSavedQuery::USER_ID, $id);
+
+    return $criteria;
+  }
+
+  public static function getsavedQuerysById($id, array $options = array())
+  {
+    $criteria = new Criteria;
+    self::addsavedQuerysCriteriaById($criteria, $id);
+
+    return QubitSavedQuery::get($criteria, $options);
+  }
+
+  public function addsavedQuerysCriteria(Criteria $criteria)
+  {
+    return self::addsavedQuerysCriteriaById($criteria, $this->id);
   }
 
   public static function addaclPermissionsCriteriaById(Criteria $criteria, $id)
@@ -212,25 +358,5 @@ abstract class BaseUser extends QubitActor implements ArrayAccess
   public function addaclUserGroupsCriteria(Criteria $criteria)
   {
     return self::addaclUserGroupsCriteriaById($criteria, $this->id);
-  }
-
-  public static function addnotesCriteriaById(Criteria $criteria, $id)
-  {
-    $criteria->add(QubitNote::USER_ID, $id);
-
-    return $criteria;
-  }
-
-  public static function getnotesById($id, array $options = array())
-  {
-    $criteria = new Criteria;
-    self::addnotesCriteriaById($criteria, $id);
-
-    return QubitNote::get($criteria, $options);
-  }
-
-  public function addnotesCriteria(Criteria $criteria)
-  {
-    return self::addnotesCriteriaById($criteria, $this->id);
   }
 }
