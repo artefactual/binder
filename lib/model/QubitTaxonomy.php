@@ -72,11 +72,8 @@ class QubitTaxonomy extends BaseTaxonomy
     // Metadata templates
     AIP_TYPE_ID = 71,
 
-    THEMATIC_AREA_ID = 72,
-    GEOGRAPHIC_SUBREGION_ID = 73,
-
-    // DACS notes
-    DACS_NOTE_ID = 74;
+    // Access log types
+    ACCESS_LOG_ENTRY_TYPE_ID = 72;
 
   public static
     $lockedTaxonomies = array(
