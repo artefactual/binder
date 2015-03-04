@@ -1,0 +1,109 @@
+.dashboard-header {
+
+  height: 130px;
+
+  .banner {
+    position: absolute;
+    right: 0;
+    left: 0;
+    overflow: hidden;
+    height: 110px;
+    box-shadow:
+      0 -2px 4px rgba(0, 0, 0, .15),
+      0 2px 4px rgba(0, 0, 0, .15);
+  }
+
+  .banner-wrapper {
+    width: 120%;
+  }
+
+  .banner-item {
+    float: left;
+    img {
+      height: 110px;
+    }
+  }
+
+}
+
+// Dashboard widgets
+
+.dashboard-top-widget {
+  margin-top: 130px;
+  .tab-content {
+    min-height: 0 !important;
+  }
+}
+
+.dashboard-widget {
+
+  margin-top: 20px;
+
+  h3 {
+    font-weight: normal;
+    line-height: 32px;
+    color: @gray;
+    &:before {
+      padding-right: 5px;
+    }
+  }
+
+  .nav {
+    margin-bottom: 0;
+    a {
+      cursor: pointer;
+      // section > a has inherited styled requiring override
+      margin-bottom: -1px;
+    }
+    .active a {
+      background: @white;
+    }
+  }
+
+  .tab-content {
+    background: @white;
+    overflow: hidden;
+    padding: 20px;
+    border: 1px solid #ddd;
+    border-top: none;
+    min-height: 240px;
+    max-height: 430px;
+  }
+
+}
+
+.short-widget-content {
+  max-height: 300px;
+  overflow: scroll;
+  background: @white;
+  padding: 20px;
+  border: 1px solid #ddd;
+}
+
+.integrity-checker-widget {
+  .integrity-status-field {
+    text-align: center;
+
+    h3 {
+      line-height: 16px;
+    }
+
+    span {
+      border-radius: 4px;
+      border: 1px solid @grayLighter;
+      padding: 6px 9px;
+    }
+
+    p {
+      margin-top: 5px;
+    }
+  }
+
+  .fixity-checker-view-all {
+    width: 100px;
+  }
+}
+
+.recovery-status {
+  margin-left: 20px;
+}

@@ -1,0 +1,76 @@
+@font-face {
+  font-family: 'fontello';
+  src: url('../../vendor/fonts/font-icon-package-fontello/fontello.eot?51048976');
+  src: url('../../vendor/fonts/font-icon-package-fontello/fontello.eot?51048976#iefix') format('embedded-opentype'),
+       url('../../vendor/fonts/font-icon-package-fontello/fontello.woff?51048976') format('woff'),
+       url('../../vendor/fonts/font-icon-package-fontello/fontello.ttf?51048976') format('truetype'),
+       url('../../vendor/fonts/font-icon-package-fontello/fontello.svg?51048976#fontello') format('svg');
+  font-weight: normal;
+  font-style: normal;
+}
+
+.fontello:before {
+  font-family: "fontello";
+  font-style: normal;
+  font-weight: normal;
+  speak: none;
+
+  display: inline-block;
+  text-decoration: inherit;
+  width: 1em;
+  margin-right: .2em;
+  text-align: center;
+
+  // For safety - reset parent styles, that can break glyph codes
+  font-variant: normal;
+  text-transform: none;
+
+  // Fix for twitter bootstrap
+  line-height: 1em;
+}
+
+// Font-Awesome, TODO: remove this in favor of fontello?
+// This sets parent styles for pseudo class icon use (:after, :before)
+
+.fa-icon-set (@color, @padding-right: 0) {
+  color: @color;
+  font-family: FontAwesome;
+  font-style: normal;
+  font-weight: normal;
+  text-decoration: inherit;
+  padding-right: @padding-right;
+}
+
+// Font-Awesome / Fontello icon aliases in DRMC
+// Be aware that Font-Awesome has its own .icon-* namespace
+
+.drmc-icon-chart-pie:before          { content: "\e800"; }
+.drmc-icon-chart-line:before         { content: "\e801"; }
+.drmc-icon-chart-bar:before          { content: "\e802"; }
+.drmc-icon-chart-area:before         { content: "\e803"; }
+.drmc-icon-edit:before               { content: "\f040"; }
+.drmc-icon-hide-relationships:before { content: "\f074"; }
+.drmc-icon-expand-all:before         { content: "\f0e8"; }
+.drmc-icon-angle-double-up:before    { content: "\f102"; }
+.drmc-icon-angle-double-down:before  { content: "\f103"; }
+.drmc-icon-move:before               { content: "\f148"; }
+.drmc-icon-add-child:before          { content: "\f055"; }
+.drmc-icon-download:before           { content: "\f019"; }
+.drmc-icon-delete:before             { content: "\f057"; }
+.drmc-icon-fullscreen:before         { content: "\f0b2"; }
+.drmc-icon-maximize:before           { content: "\f0fe"; }
+.drmc-icon-minimize:before           { content: "\f146"; }
+.drmc-icon-sidex:before              { content: "\f00d"; }
+.drmc-icon-grid:before               { content: "\f009"; }
+.drmc-icon-arrow-right:before        { content: "\f061"; }
+.drmc-icon-arrow-left:before         { content: "\f060"; }
+.drmc-icon-fullscreen:before         { content: "\f0b2"; }
+.drmc-icon-rankdir:before            { content: "\f0dc"; }
+.drmc-icon-audio:before              { content: "\f001"; }
+.drmc-icon-image:before              { content: "\f03e"; }
+.drmc-icon-text:before               { content: "\f0ea"; }
+.drmc-icon-video:before              { content: "\f008"; }
+.drmc-icon-other:before              { content: "\f028"; }
+.drmc-icon-close:before              { content: "\f00d"; }
+.drmc-icon-center:before             { content: "\f140"; }
+.drmc-icon-cb-aips:before            { content: "\f114"; }

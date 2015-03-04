@@ -1,0 +1,123 @@
+<div>
+
+  <div class="modal-header">
+    <button type="button" ng-click="cancel()" class="close">×</button>
+    <h2>{{ new ? 'Add' : 'Edit' }} supporting technology record</h2>
+  </div>
+
+  <form name="modalContainer.form" ng-submit="submit()" novalidate>
+
+    <div class="modal-body">
+
+      <div class="form-item">
+        <label>Identifier</label>
+        <input type="text" name="identifier" ng-model="resource.identifier" tooltip="{{ tooltips.identifier }}" tooltip-trigger="focus" tooltip-placement="bottom"/>
+      </div>
+
+      <div class="form-item">
+        <label class="required">Title</label>
+        <input type="text" name="title" ng-model="resource.title" tooltip="{{ tooltips.title }}" tooltip-trigger="focus" tooltip-placement="bottom" required/>
+      </div>
+
+      <div class="form-item">
+        <label class="required">Parent</label>
+        <input ng-if="resource.parent_id > 1" type="text" ng-model="resource.parent" ng-disabled="true"/>
+        <input ng-if="resource.parent_id == 1" type="text" value="Root elemement" ng-disabled="true"/>
+        <input ng-if="resource.parent_id == undefined" type="text" value="You are creating a root element" ng-disabled="true"/>
+      </div>
+
+      <div class="form-item">
+        <h4>Name(s)</h4>
+        <table class="table table-bordered">
+          <thead>
+            <tr>
+              <th style="width: 60%">Actor name</th>
+              <th style="width: 40%">Type</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                <input type="text" ng-model="resource.names.0.authorized_form_of_name" typeahead="actor.key as actor.authorized_form_of_name for actor in searchActor($viewValue)" typeahead-on-select="onSelectActor($item, $modal, $label)"/>
+              </td>
+              <td>
+                <select ng-model="resource.names.0.type_id" ng-options="type.id as type.name for type in eventTypesTaxonomy">
+                  <option value=""></option>
+                </select>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="form-item">
+        <h4>Date(s)</h4>
+        <table class="table table-bordered multiRow">
+          <thead>
+            <tr>
+              <th style="width: 40%">Date</th>
+              <th style="width: 30%">Start</th>
+              <th style="width: 30%">End</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                <div>
+                  <input type="text" ng-model="resource.dates.0.date" tooltip="{{ tooltips.date }}" tooltip-trigger="focus" tooltip-placement="bottom"/>
+                </div>
+              </td>
+              <td>
+                <input type="date" ng-model="resource.dates.0.start_date"/>
+              </td>
+              <td>
+                <div>
+                  <input type="date" ng-model="resource.dates.0.end_date"/>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="form-item">
+        <label>Description</label>
+        <textarea rows="4" cols="30" name="description" ng-model="resource.description" tooltip="{{ tooltips.description }}" tooltip-trigger="focus" tooltip-placement="bottom"></textarea>
+      </div>
+
+      <div class="form-item">
+        <label>Type</label>
+        <select name="types" ng-model="resource.types.0.id" ng-options="type.id as type.name for type in dcTypesTaxonomy">
+          <option value=""></option>
+        </select>
+      </div>
+
+      <div class="form-item">
+        <label>Format</label>
+        <textarea rows="4" cols="30" name="format" ng-model="resource.format" tooltip="{{ tooltips.format }}" tooltip-trigger="focus" tooltip-placement="bottom"></textarea>
+      </div>
+
+      <div class="form-item">
+        <label>Source</label>
+        <textarea rows="4" cols="30" name="source" ng-model="resource.source" tooltip="{{ tooltips.source }}" tooltip-trigger="focus" tooltip-placement="bottom"></textarea>
+      </div>
+
+      <div class="form-item">
+        <label>Rights</label>
+        <textarea rows="4" cols="30" name="rights" ng-model="resource.rights" tooltip="{{ tooltips.conditions }}" tooltip-trigger="focus" tooltip-placement="bottom"></textarea>
+      </div>
+
+    </div>
+
+    <div class="modal-footer">
+      <div class="modal-footer-message" ng-show="modalContainer.form.$invalid">
+        Please fill out all of the required fields.
+      </div>
+      <button type="submit" ng-class="{ btn: true, 'btn-primary': modalContainer.form.$valid, 'btn-danger': modalContainer.form.$invalid }" ng-disabled="modalContainer.form.$invalid">{{ new ? 'Create' : 'Update' }}</button>
+      <button class="btn" ng-click="reset($event)">Reset</button>
+      <button class="btn btn-cancel" ng-click="cancel()">Cancel</button>
+    </div>
+
+  </form>
+
+</div>

@@ -1,0 +1,110 @@
+<div class="row-fluid">
+
+  <div class="span12">
+
+    <h1 class="drmc-title drmc-color-supporting-technology-record">{{ techRecord.title }}</h1>
+
+    <section class="breadcrumb">
+      <ul>
+        <li><a ui-sref="main.search.entity({ entity: 'technology-records'})">Supporting technology records</a></li>
+        <li><span>{{ techRecord.title }}</span></li>
+      </ul>
+    </section>
+
+  </div>
+
+</div>
+
+<div class="row-fluid">
+
+  <div class="span12">
+    <div id="main-column">
+
+      <div class="content">
+
+        <section class="row-fluid">
+          <div class="menu-list">
+            <ul class="menu-list-left">
+              <li><h2>Dublin Core metadata</h2></li>
+            </ul>
+            <ul class="menu-list-right nav nav-pills">
+              <li><a class="drmc-icon-edit" href ng-click="edit()">Edit</a></li>
+              <li><a class="drmc-icon-add-child" href ng-click="addChild()">Add child</a></li>
+            </ul>
+          </div>
+          <div>
+
+            <div class="field" ng-show="techRecord.identifier != undefined">
+              <h3>Identifier</h3>
+              <div>{{ techRecord.identifier }}</div>
+            </div>
+            <div class="field" ng-show="techRecord.title != undefined">
+              <h3>Title</h3>
+              <div>{{ techRecord.title }}</div>
+            </div>
+            <div class="field" ng-show="techRecord.description != undefined">
+              <h3>Description</h3>
+              <div>{{ techRecord.description }}</div>
+            </div>
+            <div class="field" ng-show="techRecord.names != undefined">
+              <h3>Name(s)</h3>
+              <div>
+                <ul>
+                  <li ng-repeat="name in techRecord.names">
+                    <ul>
+                      <li ng-if="name.authorized_form_of_name != undefined">
+                        {{ name.authorized_form_of_name }} <span ng-if="name.type != undefined">({{ name.type }})</span>
+                      </li>
+                    </ul>
+                  </li>
+                </ul>
+              </div>
+            </div>
+            <div class="field" ng-show="techRecord.dates != undefined">
+              <h3>Date(s)</h3>
+              <div>
+                <ul>
+                  <li ng-repeat="date in techRecord.dates">
+                    <ul>
+                      <li ng-if="date.start_date != undefined">Start date: {{ date.start_date }}</li>
+                      <li ng-if="date.end_date != undefined">End date: {{ date.end_date }}</li>
+                      <li ng-if="date.date != undefined">({{ date.date }})</li>
+                    </ul>
+                  </li>
+                </ul>
+              </div>
+            </div>
+            <div class="field" ng-show="techRecord.types != undefined">
+              <h3>Type</h3>
+              <div>
+                <ul>
+                  <li ng-repeat="type in techRecord.types">{{ type.name }}</li>
+                </ul>
+              </div>
+            </div>
+            <div class="field" ng-show="techRecord.format != undefined">
+              <h3>Format</h3>
+              <div>{{ techRecord.format }}</div>
+            </div>
+            <div class="field" ng-show="techRecord.source != undefined">
+              <h3>Source</h3>
+              <div>{{ techRecord.source }}</div>
+            </div>
+            <div class="field" ng-show="techRecord.rights != undefined">
+              <h3>Rights</h3>
+              <div>{{ techRecord.rights }}</div>
+            </div>
+          </div>
+
+        </section>
+
+      </div>
+
+      <ar:context-browser-technology id="{{ techRecord.id }}" user="user" files="files" on-select-node="selectNode()"></ar:context-browser-technology>
+
+      <ng-include src="viewsPath + '/partials/aip-overview.html'" ng-if="aggregation != undefined || files.length > 0"></ng-include>
+
+    </div>
+  </div>
+
+</div>

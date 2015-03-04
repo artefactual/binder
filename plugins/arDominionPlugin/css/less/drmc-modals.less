@@ -1,0 +1,89 @@
+// UI-Bootstrap assigns z-index to .modal and .modal-backdrop via its internal
+// template (see template/modal/window.html or template/modal/backdrop.html).
+// But Chrome fullscreen uses z-index 2147483647 (largest 32-bit signed number).
+// This hack overrides .modal and .modal-backdrop but we should look at a better
+// solution at some point.
+//
+// TODO: Can we find another solution? Having the popup with the max. z-index
+//       possible limit us to use different z-index values inside the popup if
+//       ever needed (form fields with fancy popup select boxes, etc...)
+//
+
+.modal, .modal-backdrop {
+  z-index: 2147483647 !important;
+}
+
+// Modal sizes
+
+.modal-size(@width) {
+  width: @width;
+  margin-left: -(@width / 2);
+}
+
+.modal-large {
+  .modal-size(800px);
+}
+
+// Override inherited modal styles
+
+.modal {
+
+  .modal-header {
+    border-bottom: 1px solid #ddd;
+    box-shadow: inset 0 1px 0 #ccc;
+    #gradient > .vertical(@white, #f5f5f5);
+    .close {
+      font-size: 30px;
+      padding-top: 5px;
+    }
+    h1, h2, h3 {
+      line-height: 20px;
+      font-size: 20px;
+    }
+  }
+
+  .content {
+    border: 1px solid #f2f2f2;
+    box-shadow: none;
+    -webkit-box-shadow: none;
+    -moz-box-shadow: none;
+  }
+
+  .modal-body {
+    background: @white;
+  }
+
+  .form-item {
+    margin-bottom: 10px;
+  }
+
+  select, input, textarea {
+    margin-bottom: 0;
+  }
+
+}
+
+// Fullscreen modal
+
+.fullscreen-modal {
+  padding: 0;
+  margin: 0;
+  overflow: hidden;
+  width: 100%;
+  height: 100%;
+  position: fixed;
+  left: 0px; top: 0px; right: 0px; bottom: 0px;
+  background: @fsModalMid;
+  // Cancel properties inherited from .modal
+  border-radius: 0;
+  border-top: 0;
+  &.fade.in {
+    top: 0;
+  }
+}
+
+// Footer message, normally for validation warnings
+
+.modal-footer-message {
+  float: left;
+}

@@ -1,0 +1,150 @@
+<ng-include src="viewsPath + '/partials/search-tabs.html'"></ng-include>
+
+<div class="row-fluid">
+
+  <div class="span3">
+
+    <section id="facets">
+      <h3>Narrow your results by:</h3>
+      <ar-facet label="Classification" facet="data.facets.type" field="criteria['type[]']"></ar-facet>
+      <ar-range-facet type="size" label="Size" facet="data.facets.size" from="criteria.sizeFrom" to="criteria.sizeTo" callback="getSizeRangeLabel(arg1, arg2)"></ar-range-facet>
+      <ar-range-facet type="date" label="Date ingested" facet="data.facets.dateIngested" from="criteria.ingestedFrom" to="criteria.ingestedTo" callback="getDateRangeLabel(arg1, arg2, arg3)"></ar-range-facet>
+      <ar-facet label="Format" facet="data.facets.format" field="criteria['format[]']"></ar-facet>
+      <ar-facet label="Video codec" facet="data.facets.videoCodec" field="criteria['videoCodec[]']"></ar-facet>
+      <ar-facet label="Audio codec" facet="data.facets.audioCodec" field="criteria['audioCodec[]']"></ar-facet>
+      <ar-facet label="Resolution" facet="data.facets.resolution" field="criteria['resolution[]']"></ar-facet>
+      <ar-facet label="Chroma sub sampling" facet="data.facets.chromaSubSampling" field="criteria['chromaSubSampling[]']"></ar-facet>
+      <ar-facet label="Color space" facet="data.facets.colorSpace" field="criteria['colorSpace[]']"></ar-facet>
+      <ar-facet label="Sample rate" facet="data.facets.sampleRate" field="criteria['sampleRate[]']"></ar-facet>
+      <ar-facet label="Bit depth" facet="data.facets.bitDepth" field="criteria['bitDepth[]']"></ar-facet>
+    </section>
+
+  </div>
+
+  <div class="span9">
+
+    <div id="main-column">
+
+      <div class="row-fluid">
+        <h1 class="multiline drmc-title drmc-color-aip span9">
+          Showing {{ data.total }} results
+          <span class="sub">AIPs search</span>
+        </h1>
+
+        <div id="save-search" class="span3">
+          <a href ng-click="openSaveSearchModal(criteria)"><i class="icon-save"></i>Save search</a>
+        </div>
+      </div>
+
+      <!-- ································································· -->
+      <!-- AipSearchCtrl                                                     -->
+      <!-- ································································· -->
+      <div class="content" ng-controller="AipSearchCtrl">
+
+        <section>
+          <div class="menu-list" >
+            <ul class="menu-list-left">
+              <li><h2>Overview</h2></li>
+            </ul>
+            <ul class="menu-list-right nav nav-pills">
+              <li>
+                <a href ng-click="toggleOverview()" ng-class="{ 'drmc-icon-angle-double-down': !showOverview, 'drmc-icon-angle-double-up': showOverview }">{{ showOverview ? 'Hide' : 'Show' }}</a>
+              </li>
+            </ul>
+          </div>
+          <section ng-show="showOverview">
+            <div class="field">
+              <h3>Total AIPs</h3>
+              <div>
+                {{ data.overview.total.count || 0 }}
+                <span>&nbsp;{{ data.overview.total.size | UnitFilter:2 | EmptyFilter }}</span>
+              </div>
+            </div>
+            <div class="field">
+              <h3>Artwork component AIPs</h3>
+              <div>{{ data.overview[179].count || 0 }}
+                <span>&nbsp;{{ data.overview[179].size | UnitFilter:2 | EmptyFilter }}</span>
+              </div>
+            </div>
+             <div class="field">
+              <h3>Artwork material AIPs</h3>
+              <div>
+                {{ data.overview[180].count || 0 }}
+                <span>&nbsp;{{ data.overview[180].size | UnitFilter:2 | EmptyFilter }}</span>
+              </div>
+            </div>
+            <div class="field">
+              <h3>Supporting documentation AIPs</h3>
+              <div>
+                {{ data.overview[181].count || 0 }}
+                <span>&nbsp;{{ data.overview[181].size | UnitFilter:2 | EmptyFilter }}</span>
+              </div>
+            </div>
+            <div class="field">
+              <h3>Supporting technology AIPs</h3>
+              <div>
+                {{ data.overview[182].count || 0 }}
+                <span>&nbsp;{{ data.overview[182].size | UnitFilter:2 | EmptyFilter }}</span>
+              </div>
+            </div>
+            <div class="field">
+              <h3>Unclassified AIPs</h3>
+              <div>
+                {{ data.overview.unclassified.count || 0 }}
+                <span>&nbsp;{{ data.overview.unclassified.size | UnitFilter:2 | EmptyFilter }}</span>
+              </div>
+            </div>
+          </section>
+        </section>
+
+        <section class="row-fluid">
+
+          <h2>AIPs</h2>
+
+          <div class="browse-view-list" ng-hide="showBrowseView">
+            <table class="table table-bordered">
+              <thead>
+                <tr>
+                  <th>
+                    <ar-sort-header field="name" label="Name" criteria="criteria"></ar-sort-header>
+                  </th>
+                  <th>
+                    <ar-sort-header field="size" label="Size" criteria="criteria"></ar-sort-header>
+                  </th>
+                  <th>
+                    <ar-sort-header field="createdAt" label="Added" criteria="criteria"></ar-sort-header>
+                  </th>
+                  <th>
+                    <ar-sort-header field="typeId" label="Class" criteria="criteria"></ar-sort-header>
+                  </th>
+                  <th>
+                    <ar-sort-header field="partOf" label="Part of" criteria="criteria"></ar-sort-header>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr ng-repeat="(key, aip) in data.results">
+                  <td><a href ui-sref="main.aips.view({ uuid: aip.uuid })">{{ aip.name }}</a></td>
+                  <td>{{ aip.size | UnitFilter:1 }}</td>
+                  <td>{{ aip.created_at | date:'short' }}</td>
+                  <td><a href ng-click="openReclassifyModal(aip)">{{ aip.type.name || 'Unclassified' }}</a></td>
+                  <td>
+                    <a ng-if="aip.part_of.level_of_description_id == artworkId" ui-sref="main.works.view({ id: aip.part_of.id })">{{ aip.part_of.title }}</a>
+                    <a ng-if="aip.part_of.level_of_description_id == techId" ui-sref="main.technology-records.view({ id: aip.part_of.id })">{{ aip.part_of.title }}</a>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+        </section>
+
+      </div>
+
+      <ar-pager items-per-page="{{ criteria.limit }}" page="page"></ar-pager>
+
+    </div>
+
+  </div>
+
+</div>

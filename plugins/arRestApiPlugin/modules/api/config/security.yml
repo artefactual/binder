@@ -1,0 +1,20 @@
+default:
+  is_secure: true
+
+informationobjectsCreate:
+  credentials: [[ contributor, editor, administrator ]]
+
+informationobjectsDelete:
+  credentials: administrator
+
+informationobjectsMove:
+  credentials: [[ contributor, editor, administrator ]]
+
+informationobjectsAssociate:
+  credentials: [[ contributor, editor, administrator ]]
+
+informationobjectsUpdateAssociation:
+  credentials: [[ contributor, editor, administrator ]]
+
+informationobjectsDeleteAssociation:
+  credentials: [[ contributor, editor, administrator ]]

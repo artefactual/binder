@@ -1,0 +1,38 @@
+{
+
+  // JSHint configuration
+
+  "node": true,
+  "browser": true,
+  "esnext": true,
+  "bitwise": true,
+  "camelcase": false,
+  "curly": true,
+  "eqeqeq": true,
+  "immed": true,
+  "indent": 2,
+  "latedef": true,
+  "newcap": true,
+  "noarg": true,
+  "quotmark": "single",
+  "regexp": true,
+  "undef": true,
+  "unused": true,
+  "strict": true,
+  "trailing": true,
+  "smarttabs": true,
+  "globals": {
+    "angular": false,
+    "Qubit": false,
+    "Rickshaw": false,
+    "jQuery": false,
+    "d3": false,
+    "dagre": false,
+    "dagreD3": false,
+    "Plumb": false,
+    "jsPlumb": false,
+    "prompt": false,
+    "ContextBrowser": false
+  }
+
+}
