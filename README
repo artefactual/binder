@@ -1,8 +1,98 @@
 See http://accesstomemory.org/wiki for installation instructions.
 
-Access to Memory (AtoM) is an application built using the Symfony framework.
+The DRMC is an application built using the Symfony framework.
 
 See http://symfony-project.com for additional instructions on installing and
 configuring a Symfony application.
 
 See COPYRIGHT and LICENSE for list of dependencies and associated licenses.
+
+Dependencies
+------------
+
+* php 5.4.0 or newer
+* php5-ldap
+* nodejs, npm, grunt-cli
+
+Storage service client configuration
+------------------------------------
+
+The Archivematica storage service handles storage of AIPs. The DRMC interfaces
+with it to allow the downloading of AIPs/AIP files and the recovery of AIPs.
+
+# To interface with the Archivematica Storage Service, define these
+  environment variables (e.g. in your PHP pool):
+
+  env[ARCHIVEMATICA_SS_HOST] = "127.0.0.1"
+  env[ARCHIVEMATICA_SS_PORT] = "8000"
+  env[ARCHIVEMATICA_SS_PIPELINE_UUID] = "6117c5fa-d63f-44d8-9920-89468c68683e"
+
+
+LDAP configuration
+------------------
+
+# Install php5-ldap and make sure that the module is being loaded.
+
+# Define the following environment variables (e.g. in your PHP pool):
+
+  env[ATOM_DRMC_LDAP_ADMIN_USERNAME] = "foo"
+  env[ATOM_DRMC_LDAP_ADMIN_PASSWORD] = "bar"
+
+# Create apps/qubit/config/factories.yml if it doesn't exist yet (this file is
+  not tracked by git) with the following contents:
+
+  all:
+    user:
+      class: adLdapUser
+
+# Create apps/qubit/config/app.yml if it doesn't exist yet (this file is not
+  tracked by git) with the following contents:
+
+  all:
+    ldap_account_suffix: "@example.com"
+    ldap_base_dn: DC=EXAMPLE,DC=COM
+    ldap_domain_controllers: ad01.example.com
+    ldap_user_group: CN=AtoM users,OU=Archivists,OU=Groups,DC=EXAMPLE,DC=COM
+
+# Clear the Symfony cache and restart your pool.
+
+NOTE: This application will check if existing LDAP users are member of the group
+defined in ldap_user_group.
+
+
+Storage service AIP recovery process and configuration
+------------------------------------------------------
+
+AIP recovery support allows a DRMC administrator to replace a corrupt version
+of a stored AIP with a correct version (restored from a backup, for example).
+
+The AIP recovery process involves copying the recovered version of the AIP
+into a dedicated recovery directory accessible by the storage service. You can
+determine the location of this directory by clicking "Locations" in the storage
+service administration web interface and finding the path assocated with AIP
+recovery.
+
+The DRMC's AIP recovery integration requires the storage service be configured
+to report back to the DRMC when a storage service administrator has made a
+decision about an AIP restore request (approving or rejecting it) or if an
+approved AIP restore request has failed.
+
+To configure the storage service to report AIP restore progress back to the
+DRMC, click "Administration" in the storage service administration web
+interface enter the following into the field labelled "Recover request
+notification url" (replacing the DRMC server address placeholder with your
+own DRMC server's address): 
+
+  http://<DRMC server address>/api/recover/results
+
+For authentication purposes, you'll also need to enter a valid DRMC username
+and password into the two fields below it. Click "Save" when you're done.
+
+
+Periodic jobs (cron)
+-------------------------------------------------------------------------------
+
+* php symfony drmc:tms-update
+
+  Every day at 5am EST,
+  https://projects.artefactual.com/issues/6917#change-27359

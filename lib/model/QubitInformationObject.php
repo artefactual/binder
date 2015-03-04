@@ -1083,43 +1083,6 @@ class QubitInformationObject extends BaseInformationObject
     }
   }
 
-  /**
-   * Get the total digital object count for this & all descendents to this
-   * information object.
-   *
-   * @return int  The total digital object count.
-   */
-  public function getDescendentDigitalObjectCount()
-  {
-    $sql = '
-      SELECT id FROM information_object
-      WHERE lft > ? and rgt < ?
-    ';
-
-    $rows = QubitPdo::fetchAll($sql, array($this->lft, $this->rgt));
-
-    // Convert SQL rows into just an array of integers with all the ids...
-    $ids = array_map(
-      function($row)
-      {
-        return (int)$row->id;
-      },
-      $rows
-    );
-
-    if (!count($ids))
-    {
-      return 0;
-    }
-
-    $sql = '
-      SELECT count(1) FROM digital_object
-      WHERE information_object_id IN (' . implode(',', $ids) . ')
-    ';
-
-    return QubitPdo::fetchColumn($sql);
-  }
-
   /****************
    Import methods
   *****************/
@@ -1305,38 +1268,38 @@ class QubitInformationObject extends BaseInformationObject
 
   public function setActorByName($name, $options)
   {
-    // Only create an link actor if the event or relation type is indicated
+    // Only create an linked Actor if the event or relation type is indicated
     if (!isset($options['event_type_id']) && !isset($options['relation_type_id']))
     {
       return;
     }
 
-    // Information object must be saved before.
-    // The id is needed to save the events and relations when
-    // they are created instead of when the information object is saved
-    // to be able to execute raw queries over them (in QubitActor::getByNameAndRepositoryId)
-    if (!isset($this->id))
-    {
-      $this->save();
-    }
+    // See if the Actor record already exists, if not create it
+    $criteria = new Criteria;
+    $criteria->addJoin(QubitActor::ID, QubitActorI18n::ID);
+    $criteria->add(QubitActorI18n::AUTHORIZED_FORM_OF_NAME, $name);
 
-    // Get actor or create a new one. If the actor exists the data is not overwritten
-    if (null === $actor = QubitActor::getByNameAndRepositoryId($name, $this->repositoryId))
+    if (null === $actor = QubitActor::getOne($criteria))
     {
       $actor = new QubitActor;
-      $actor->parentId = QubitActor::ROOT_ID;
-      $actor->setAuthorizedFormOfName($name);
 
+      // Make root actor the parent of new actors
+      $actor->parentId = QubitActor::ROOT_ID;
+
+      $actor->setAuthorizedFormOfName($name);
       if (isset($options['entity_type_id']))
       {
+        // set actor entityTypeId
         $actor->setEntityTypeId($options['entity_type_id']);
       }
       if (isset($options['source']))
       {
+        // set actor entityTypeId
         $actor->setSources($options['source']);
       }
       if (isset($options['rules']))
       {
+        // set actor entityTypeId
         $actor->setRules($options['rules']);
       }
       if (isset($options['history']))
@@ -1347,17 +1310,15 @@ class QubitInformationObject extends BaseInformationObject
       {
         $actor->datesOfExistence = $options['dates_of_existence'];
       }
-
       $actor->save();
     }
 
     if (isset($options['event_type_id']))
     {
-      // Create an event object to link the information object and actor
+      // create an event object to link the information object and actor
       $event = new QubitEvent;
       $event->setActorId($actor->id);
       $event->setTypeId($options['event_type_id']);
-
       if (isset($options['dates']))
       {
         $event->setDate($options['dates']);
@@ -1375,17 +1336,11 @@ class QubitInformationObject extends BaseInformationObject
         $event->setDescription($options['event_note']);
       }
 
-      // Needs to be saved and added to $this->events
-      // to be able to execute raw queries and to be available
-      // for the following existingRelation foreach
-      $event->informationObjectId = $this->id;
-      $event->save();
-
       $this->events[] = $event;
     }
     else if (isset($options['relation_type_id']))
     {
-      // Only add actor as name access point if they are not already linked to
+      // only add Actor as name access point if they are not already linked to
       // an event (i.e. they are not already a "creator", "accumulator", etc.)
       $existingRelation = false;
       foreach ($this->events as $existingEvent)
@@ -1402,8 +1357,6 @@ class QubitInformationObject extends BaseInformationObject
         $relation = new QubitRelation;
         $relation->objectId = $actor->id;
         $relation->typeId = QubitTerm::NAME_ACCESS_POINT_ID;
-        $relation->subjectId = $this->id;
-        $relation->save();
 
         $this->relationsRelatedBysubjectId[] = $relation;
       }
@@ -1647,7 +1600,6 @@ class QubitInformationObject extends BaseInformationObject
 
           $eventSpec = array(
             'event_type_id' => QubitTerm::CREATION_ID,
-            'entity_type_id' => $typeId,
             'history'       => $history
           );
 
@@ -1727,10 +1679,9 @@ class QubitInformationObject extends BaseInformationObject
   {
     $physicalDescription = '';
     $childTags = array(
-      'extent' => 'Extent',
-      'dimensions' => 'Dimensions',
-      'genreform' => 'Form of material',
-      'physfacet' => 'Physical facet'
+      'extent' => 'Extent', 
+      'dimensions' => 'Dimensions', 
+      'genreform' => 'Form of material'
     );
 
     foreach ($childTags as $tag => $headingText)
@@ -1740,7 +1691,7 @@ class QubitInformationObject extends BaseInformationObject
       {
         $physicalDescription .= "<dt>{$headingText}</dt><dd>" . QubitXmlImport::replaceLineBreaks($nodeList->item(0)) . "</dd>";
 
-        // Remove the children nodes as we go so we're
+        // Remove the children nodes as we go so we're 
         // left with any remaining node text in physDescNode.
         $physDescNode->removeChild($nodeList->item(0));
       }
@@ -1883,52 +1834,27 @@ class QubitInformationObject extends BaseInformationObject
     }
   }
 
-  /**
-   * Returns a date string YYYY-MM-DD when given a date from an EAD <unitdate> @normal attribute
-   *
-   * @param $date  A date string from an EAD file, e.g. 19601103
-   * @return Will return a MySQL friendly YYYY-MM-DD date string (uses '-0' if missing a field)
-   */
-  private function getNormalizedDate($date)
-  {
-    if (strpos($date, '-') !== false)
-    {
-      return $date; // Already in YYYY-MM-DD format (hopefully)
-    }
-
-    // Check to see if date is proper length, either 4 for year only,
-    // 6 for year & month, or 8 for year & month & day
-    if (!in_array(strlen($date), array(4, 6, 8)))
-    {
-      return null;
-    }
-
-    $year = $month = $day = 0;
-
-    switch (true)
-    {
-      case strlen($date) >= 4: $year  = (int)substr($date, 0, 4);
-      case strlen($date) >= 6: $month = (int)substr($date, 4, 2);
-      case strlen($date) == 8: $day   = (int)substr($date, 6, 2);
-    }
-
-    if ($year === 0)
-    {
-      return null; // Garbage date
-    }
-
-    return "$year-$month-$day";
-  }
-
   public function setDates($date, $options = array())
   {
-    $normalizedDate = array('start' => null, 'end' => null);
-
+    // parse the normalized dates into an Event start and end date
+    $normalizedDate = array();
     if (isset($options['normalized_dates']))
     {
-      $dates = explode('/', $options['normalized_dates']);
-      $normalizedDate['start'] = $this->getNormalizedDate($dates[0]);
-      $normalizedDate['end'] = (count($dates) > 1) ? $this->getNormalizedDate($dates[1]) : null;
+      preg_match('/(?P<start>(\d{4}|\d{3}|\d{2}|\d{1})(-\d{2}|-\d{1})?(-\d{2}|-\d{1})?)\/?(?P<end>(\d{4}|\d{3}|\d{2}|\d{1})(-\d{2}|-\d{1})?(-\d{2}|-\d{1})?)?/', $options['normalized_dates'], $matches);
+      $normalizedDate['start'] = $this->getDefaultDateValue($matches['start']);
+      if (isset($matches['end']))
+      {
+        $normalizedDate['end'] = $this->getDefaultDateValue($matches['end']);
+      }
+      else
+      {
+        $normalizedDate['end'] = null;
+      }
+    }
+    else
+    {
+      $normalizedDate['start'] = null;
+      $normalizedDate['end'] = null;
     }
 
     // determine the Event type
@@ -2122,9 +2048,6 @@ class QubitInformationObject extends BaseInformationObject
       $fullType = ucfirst($label);
     }
 
-    $name = trim($name);
-    $location = trim($location);
-
     // if a type has been provided, look it up
     $term = ($fullType)
       ? QubitFlatfileImport::createOrFetchTerm(
@@ -2133,45 +2056,20 @@ class QubitInformationObject extends BaseInformationObject
         )
       : false;
 
-    // Check for an existing physical object within this collection with the same name
-    if ($this->parentId)
+    $object = new QubitPhysicalObject();
+    $object->name = trim($name);
+
+    if ($location)
     {
-      // Get collection id, note we must loop through parent ids here
-      // as opposed to calling getCollectionRoot() because these objects 
-      // aren't fully formed yet.
-
-      $topLevelParent = $this->parent;
-      while ($topLevelParent->parent && $topLevelParent->parent->id != QubitInformationObject::ROOT_ID)
-      {
-        $topLevelParent = $topLevelParent->parent;
-      }
-
-      $object = QubitPhysicalObject::checkPhysicalObjectExistsInCollection(
-        $name, 
-        $location,
-        ($term) ? $term->id : null,
-        $topLevelParent->id
-      );
+      $object->location = trim($location);
     }
 
-    // There was no existing physical object to attach, create a new one.
-    if (!isset($object) || $object === null)
+    if ($term)
     {
-      $object = new QubitPhysicalObject();
-      $object->name = $name;
-
-      if ($location)
-      {
-        $object->location = $location;
-      }
-
-      if ($term)
-      {
-        $object->typeId = $term->id;
-      }
-
-      $object->save();
+      $object->typeId = $term->id;
     }
+
+    $object->save();
 
     $this->addPhysicalObject($object);
   }
@@ -2270,6 +2168,24 @@ class QubitInformationObject extends BaseInformationObject
   public function setPublicationStatus($value)
   {
     return $this->setStatus($options = array('statusId' => $value, 'typeId' => QubitTerm::STATUS_TYPE_PUBLICATION_ID));
+  }
+
+  /**
+   * Set publication date
+   * @param $value  The year the information object was published
+   */
+  public function setPublicationDate($value)
+  {
+    // We only support singular years right now...
+    if (!is_numeric($value))
+      return;
+
+    $publicationEvent = new QubitEvent;
+    $publicationEvent->typeId = QubitTerm::PUBLICATION_ID;
+    $publicationEvent->startDate = sprintf("%s-0-0", $value);
+    $publicationEvent->endDate = sprintf("%s-0-0", $value);
+
+    $this->events[] = $publicationEvent;
   }
 
   /*****************************************************

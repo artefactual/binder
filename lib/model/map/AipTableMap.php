@@ -38,7 +38,7 @@ class AipTableMap extends TableMap {
 		// columns
 		$this->addForeignPrimaryKey('ID', 'id', 'INTEGER' , 'object', 'ID', true, null, null);
 		$this->addForeignKey('TYPE_ID', 'typeId', 'INTEGER', 'term', 'ID', false, null, null);
-		$this->addColumn('UUID', 'uuid', 'VARCHAR', false, 36, null);
+		$this->addColumn('UUID', 'uuid', 'VARCHAR', true, 36, null);
 		$this->addColumn('FILENAME', 'filename', 'VARCHAR', false, 1024, null);
 		$this->addColumn('SIZE_ON_DISK', 'sizeOnDisk', 'BIGINT', false, null, null);
 		$this->addColumn('DIGITAL_OBJECT_COUNT', 'digitalObjectCount', 'INTEGER', false, null, null);
@@ -55,6 +55,8 @@ class AipTableMap extends TableMap {
     $this->addRelation('objectRelatedByid', 'object', RelationMap::MANY_TO_ONE, array('id' => 'id', ), 'CASCADE', null);
     $this->addRelation('term', 'term', RelationMap::MANY_TO_ONE, array('type_id' => 'id', ), 'SET NULL', null);
     $this->addRelation('objectRelatedBypartOf', 'object', RelationMap::MANY_TO_ONE, array('part_of' => 'id', ), 'SET NULL', null);
+    $this->addRelation('fixityReport', 'fixityReport', RelationMap::ONE_TO_MANY, array('id' => 'aip_id', ), 'SET NULL', null);
+    $this->addRelation('fixityRecovery', 'fixityRecovery', RelationMap::ONE_TO_MANY, array('id' => 'aip_id', ), 'SET NULL', null);
 	} // buildRelations()
 
 } // AipTableMap
