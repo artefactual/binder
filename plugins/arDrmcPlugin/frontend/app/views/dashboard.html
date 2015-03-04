@@ -1,0 +1,283 @@
+<div class="row">
+
+  <!-- Recent additions -->
+  <div class="span12 dashboard-header" ng-if="ingestionActivity.length">
+    <h5>Recent additions</h5>
+    <div class="banner">
+      <div class="banner-wrapper">
+        <div class="banner-item" ng-repeat="item in ingestionActivity | limitTo:20">
+          <a href ui-sref="main.works.view({ id: item.id })">
+            <img ng-src="{{ item.thumbnail_path }}"/>
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="span12 dashboard-widget">
+
+    <!-- Fixity checker -->
+    <div class="dashboard-widget integrity-checker-widget">
+      <div class="content">
+
+        <div class="menu-list">
+          <ul class="menu-list-left">
+            <li><h2>Fixity audit reports</h2></li>
+          </ul>
+          <ul class="menu-list-right nav nav-pills">
+            <li>
+              <a href ng-click="toggleOverview()" ng-class="{ 'drmc-icon-angle-double-down': !showOverview, 'drmc-icon-angle-double-up': showOverview }">{{ showOverview ? 'Hide' : 'Show' }} details</a>
+            </li>
+          </ul>
+        </div>
+
+        <div class="row-fluid">
+
+          <div class="span2 integrity-status-field">
+            <h3 class="muted">Status</h3>
+            <span class="muted label" ng-class="{ 'label-important': fixityHasFails, 'label-success': !fixityHasFails }">
+              {{ fixityHasFails ? 'Error' : 'OK' }}
+              <i ng-if="fixityHasFails">({{ fixityStats.unrecoveredFailsCount }})</i>
+            </span>
+          </div>
+
+          <div ng-show="fixityStats.currentlyChecking" class="span4 integrity-status-field">
+            <h3>Currently checking</h3>
+            <img ng-src="{{ assetsPath + '/loading.gif' }}" />
+            <span ng-repeat="aip in fixityStats.currentlyChecking">
+              <a ng-if="aip.aip_name" href ui-sref="main.aips.view({ uuid: aip.aip_uuid })">{{ aip.aip_name }}</a>
+              {{ !aip.aip_name ? 'Not in Binder' : '' }}
+            </span>
+            <p ng-if="!fixityStats.currentlyChecking[0].aip_name">UUID: {{ fixityStats.currentlyChecking[0].aip_uuid }}</p>
+          </div>
+
+          <!-- if no checks currently running -->
+          <div ng-hide="fixityStats.currentlyChecking" class="span4 integrity-status-field">
+            <h3>Last repository-wide fixity audit</h3>
+            <span class="muted">{{ fixityStats.timeSinceLastCheck | ConvertSecondsFilter }} ago</span>
+          </div>
+
+          <div class="span2 integrity-status-field">
+            <h3>Checks in 24hr</h3>
+            <span class="muted">{{ fixityStats.checksLastDay }}</span>
+          </div>
+
+          <div class="span4 integrity-status-field">
+            <h3>Duration of last repository-wide audit</h3>
+            <span class="muted">{{ fixityStats.timeToCheckCollection | ConvertSecondsFilter }}</span>
+          </div>
+
+        </div>
+
+        <div class="browse-view-list">
+
+          <tabset ng-show="showOverview">
+
+            <!-- Failed -->
+            <tab heading="Failed" active="tab.active">
+              <table class="table table-bordered">
+                <thead>
+                  <tr>
+                    <th>AIP name</th>
+                    <th>AIP UUID</th>
+                    <th>Time completed</th>
+                    <th>Duration</th>
+                    <th>Outcome</th>
+                    <th>Recovery</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr ng-repeat="(key, aip) in fixityStats.lastFails" ng-class="{ 'success' : aip.outcome, 'error' : !aip.outcome }">
+                    <td>
+                      <a ng-if="aip.aip_name" href ui-sref="main.aips.view({ uuid: aip.aip_uuid })">{{ aip.aip_name }}</a>
+                      {{ !aip.aip_name ? 'Not in Binder' : '' }}
+                    </td>
+                    <td>{{ aip.aip_uuid }}</td>
+                    <td>{{ aip.time_completed | date:'short' }}</td>
+                    <td>{{ aip.duration | ConvertSecondsFilter }}</td>
+                    <td>Failed</td>
+                    <td>
+                      <span ng-show="aip.recoveryPending">Pending admin approval</span>
+                      <a href class="btn" ng-hide="aip.recoveryPending || aip.lastRecoveryResolved.fixesFailure" ng-click="requestRecover(aip.id)">Recover</a>
+                      <span ng-show="aip.lastRecoveryResolved" class="recovery-status label {{ aip.lastRecoveryResolved.outcome ? 'label-success' : 'label-important' }}">
+                        {{ aip.lastRecoveryResolved.message }}
+                      </span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+
+              <a href ui-sref="main.reports.view({ type: 'fixity_error' })" class="btn fixity-checker-view-all">View all</a>
+
+            </tab>
+
+            <!-- All -->
+            <tab heading="Recent">
+              <table class="table table-bordered">
+                <thead>
+                  <tr>
+                    <th>AIP name</th>
+                    <th>AIP UUID</th>
+                    <th>Time completed</th>
+                    <th>Duration</th>
+                    <th>Outcome</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr ng-repeat="(key, aip) in fixityStats.lastChecks" ng-class="{ 'success' : aip.outcome, 'error' : !aip.outcome }">
+                    <td>
+                      <a ng-if="aip.aip_name" href ui-sref="main.aips.view({ uuid: aip.aip_uuid })">{{ aip.aip_name }}</a>
+                      {{ !aip.aip_name ? 'Not in Binder' : '' }}
+                    </td>
+                    <td>{{ aip.aip_uuid }}</td>
+                    <td>{{ aip.time_completed | date:'short' }}</td>
+                    <td>{{ aip.duration | ConvertSecondsFilter }}</td>
+                    <td>{{ aip.statusAlert }}</td>
+                  </tr>
+                </tbody>
+              </table>
+
+              <!-- TODO: Add link to full error reports page -->
+              <a href ui-sref="main.reports.view({ type: 'fixity' })" class="btn fixity-checker-view-all">View all</a>
+
+            </tab>
+
+          </tabset>
+
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Recent activity -->
+    <div>
+      <h3 class="graph-list icon-list">Recent activity</h3>
+      <tabset>
+
+        <!-- Ingests -->
+        <tab heading="Ingests">
+          <table class="table">
+            <thead>
+              <th>Date/time</th>
+              <th>AIP</th>
+              <th>Artwork</th>
+              <th>Size</th>
+            </thead>
+            <tbody>
+              <tr ng-repeat="item in ingestionActivity | limitTo:10">
+                <td>{{ item.created_at }}</td>
+                <td>{{ item.aip_title }}</td>
+                <td>{{ item.artwork_title }}</td>
+                <td>{{ item.size_on_disk | UnitFilter:2 }}</td>
+              </tr>
+              <tr ng-if="!ingestionActivity.length">
+                <td colspan="4"><span>There is no recent ingestion activity to display</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </tab>
+
+        <!-- Downloads -->
+        <tab heading="Downloads">
+          <table class="table">
+            <thead>
+              <th>Date/time</th>
+              <th>Type</th>
+              <th>Object</th>
+              <th>Reason</th>
+              <th>User</th>
+            </thead>
+            <tbody>
+              <tr ng-repeat="item in downloadActivity | limitTo:10">
+                <td>{{ item.date }}</td>
+                <td>{{ item.type }}</td>
+                <td>
+                  <span ng-if="item.type == 'File'">{{ item.file }}</span>
+                  <a ng-if="item.type == 'AIP'" href ui-sref="main.aips.view({ uuid: item.uuid })">{{ item.file }}</a></td>
+                <td>{{ item.reason }}</td>
+                <td>{{ item.username || 'Unknown' }}</td>
+              </tr>
+              <tr ng-if="!downloadActivity.length">
+                <td colspan="4"><span>There are no recent downloads to display</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </tab>
+
+      </tabset>
+    </div>
+
+  </div>
+
+  <div class="span6 dashboard-widget">
+
+    <!-- Storage -->
+    <h3 class="fontello drmc-icon-chart-pie">Storage</h3>
+    <tabset class="dashboard-rs-graph">
+      <tab heading="Department">
+        <ar:graph-pie data="{{ countByDepartment }}" width="200" unit-filter="artworks" class="graph-pie" color="colorA"></ar:graph-pie>
+      </tab>
+      <tab heading="Codec">
+        <ar:graph-pie data="{{ storageCodecs }}" width="200" unit-filter="size" class="graph-pie" color="colorC"></ar:graph-pie>
+      </tab>
+      <tab heading="Format">
+        <ar:graph-pie data="{{ storageFormats }}" width="200" unit-filter="size" class="graph-pie" color="colorC"></ar:graph-pie>
+      </tab>
+    </tabset>
+
+    <!-- Collection totals -->
+    <div class="dashboard-widget">
+      <h3 class="icon-list">Collection totals</h3>
+      <div class="tab-like-content short-widget-content">
+        <ul class="unstyled">
+          <li ng-repeat="item in ingestionSummary.data">
+            <strong>{{ item.type }}</strong>
+            &nbsp&nbsp{{ item.total }}
+          </li>
+        </ul>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Monthly totals -->
+  <div class="span6 dashboard-widget">
+    <h3 class="fontello drmc-icon-chart-line">Monthly totals</h3>
+    <tabset class="dashboard-rs-graph">
+      <tab heading="Ingest date">
+        <ar:graph-line data="{{ monthlyCountsByCreation }}" type="line" width="400" height="280" xper-tick="100" yper-tick="40"></ar:graph-line>
+      </tab>
+      <tab heading="Collection date">
+        <ar:graph-line data="{{ yearlyCountsByCollectionDate }}" type="line" width="400" height="280" xper-tick="100" yper-tick="40"></ar:graph-line>
+      </tab>
+    </tabset>
+  </div>
+
+</div>
+
+<div class="row">
+
+  <!-- Running totals -->
+  <div class="span6 dashboard-widget">
+    <h3 class="fontello drmc-icon-chart-line">Running totals</h3>
+    <tabset class="dashboard-rs-graph">
+      <tab heading="Ingest date">
+        <ar:graph-line data="{{ monthlyTotalsByCreation }}" type="line" width="400" height="280" xper-tick="100" yper-tick="40"></ar:graph-line>
+      </tab>
+      <tab heading="Collection date">
+        <ar:graph-line data="{{ yearlyTotalsByCollectionDate }}" type="bar" width="400" height="280" xper-tick="100" yper-tick="40"></ar:graph-line>
+      </tab>
+    </tabset>
+  </div>
+
+  <!-- Artwork sizes (average vs median) -->
+  <div class="span6 dashboard-widget">
+    <h3 class="fontello drmc-icon-chart-line">Average sizes</h3>
+    <tabset class="dashboard-rs-graph">
+      <tab heading="All">
+        <ar:graph-line id="average_artwork_size_graph" type="line" data="{{ artworkSizes }}" width="400" height="280" xper-tick="50" yper-tick="40" y-filter="unitFilterRounded"></ar:graph-line>
+      </tab>
+    </tabset>
+  </div>
+
+</div>

@@ -1,0 +1,445 @@
+// Context browser
+
+.cb {
+  margin-bottom: 40px;
+}
+
+// Flexbox layout: container and sidebar
+
+.cb-body {
+  display: flex;
+  height: 600px;
+}
+
+.cb-container {
+  flex: 3;
+  height: 100%;
+}
+
+.cb-sidebar {
+  flex: 1;
+}
+
+// Header menu
+
+.cb-menu {
+
+  .active {
+    a {
+      box-shadow: inset 0 2px 4px rgba(0, 0, 0, .15), 0 1px 2px rgba(0, 0, 0, .05);
+    }
+    a, a:hover, a:before {
+      color: @grayDarker;
+    }
+    a, a:hover {
+      background-color: @grayLighter;
+    }
+  }
+
+}
+
+// Unneeded container?
+
+.cb-inner {
+}
+
+// Viewport (contains legend and .svg-container)
+
+.cb-container {
+  background-image: url('../../../arDrmcPlugin/frontend/assets/tiny_grid/tiny_grid.png');
+  background-repeat: repeat;
+  line-height: 0; // This is inherited from bootstrap I guess?
+  position: relative; // For the legend
+}
+
+.svg-container {
+  width: 100%;
+  height: 100%;
+}
+
+// Sidebar
+
+.cb-sidebar {
+  border-left: 3px solid #ccc;
+  background-color: #eee;
+  overflow: auto;
+}
+
+// Fullscreen and maximized modes
+
+.cb-fullscreen,
+.cb-maximized {
+  margin-bottom: 0;
+  border-width: 0;
+  border-radius: 0;
+  box-shadow: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  .cb-inner,
+  .cb-body {
+    height: 100%;
+  }
+}
+
+// Sidebar contents
+
+.cb-sidebar-section {
+  // Inner boxes style
+  // border: 1px solid #999; margin: 10px; border-radius: 4px;
+  background-color: @white;
+  position: relative;
+  overflow: hidden;
+  h3 {
+    margin-top: 0;
+    margin-bottom: 0;
+    padding-left: 28px;
+    padding-right: 8px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    &:before {
+      content: "";
+      width: 16px;
+      height: 16px;
+      border-radius: 8px;
+      position: absolute;
+      top: 13px;
+      left: 8px;
+    }
+    &.node-level-artwork-record:before     { background-color: @drmcNodeArtworkRecord; }
+    &.node-level-description:before        { background-color: @drmcNodeDescription; }
+    &.node-level-component:before          { background-color: @drmcNodeComponent; }
+  }
+  .node-actions {
+    padding: 8px;
+    border-top: 1px solid #ccc;
+    background-color: #e4e1d8;
+    .btn {
+      background-image: none; // Flat, cancel bootstrap
+      i {
+        font-size: 14px;
+      }
+      &.btn-delete {
+        background-color: lighten(@red, 50%);
+      }
+      span {
+        display: none;
+      }
+    }
+  }
+}
+
+.cb-sidebar-subsection-collapsible {
+  border-top: 1px solid @grayLighter;
+  h4 {
+    margin: 0;
+    padding: 0 6px;
+    line-height: 30px;
+    position: relative;
+    > a {
+      display: block;
+      color: @grayDark;
+      position: relative;
+    }
+  }
+  h4:before {
+    position: absolute;
+    right: 12px;
+    top: 0px;
+    .fa-icon-set(@gray);
+    content: "\f102";
+  }
+  &.collapsed h4:before {
+    content: "\f103";
+  }
+}
+
+.cb-sidebar-subsection-body {
+  background-image: url('../../images/separator.png');
+  background-repeat: no-repeat;
+  background-position: top center;
+}
+
+.cb-sidebar-kv-list {
+  ul {
+    padding-top: 4px;
+  }
+  li {
+    padding: 0px 4px 4px 8px;
+  }
+  .key {
+    font-weight: normal;
+    color: @grayLight;
+    font-size: 11px;
+    text-transform: uppercase;
+    &:after {
+      margin-left: 2px;
+      margin-right: 5px;
+      content: '»';
+    }
+  }
+  .value {
+    display: inline;
+    margin: 0;
+    color: @grayDark;
+  }
+}
+
+// A list of stacked thumbnails using flexbox
+
+.cb-sidebar-thumbnails {
+  display: flex;
+  flex-flow: row wrap;
+  justify-content: flex-start;
+  .item {
+    padding: 5%;
+    width: 40%;
+    height: auto;
+    cursor: pointer;
+    &:hover {
+      background-color: rgba(200, 200, 200, .15);
+    }
+    &.selected {
+      background-color: rgba(200, 200, 200, .25);
+    }
+  }
+  .preview {
+    img {
+      width: 100%;
+    }
+  }
+  .footer {
+    font-size: 12px;
+  }
+}
+
+// A list class in the context browser sidebar
+
+.cb-sidebar-table {
+  table {
+    margin: 0;
+    border: 0;
+    border-top: 1px solid #bbb;
+    border-bottom: 1px solid #bbb;
+    border-radius: 0px;
+    table-layout: fixed;
+    width:100%;
+    background-color: #eee;
+  }
+  tbody {
+    font-size: 11px;
+  }
+  tr {
+    cursor: pointer;
+    &:hover td {
+      background-color: @white;
+    }
+    &.selected td {
+      background-color: #faeabb;
+      a { color: @black; }
+    }
+  }
+  td {
+    .user-select(none); // As we are using event.shiftKey for selection
+    padding: 2px 4px;
+    border-top: none;
+    &.name {
+      text-align: left;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    &.size {
+      text-align: right;
+      width: 50px;
+      border-left: 1px solid #ddd;
+    }
+  }
+}
+
+.cb-bulk-edit {
+  h3 {
+    padding: 0 8px;
+  }
+  ul {
+    list-style-type: none;
+    margin-bottom: 5px;
+  }
+  li {
+    padding: 0 8px;
+    margin-bottom: 5px;
+  }
+}
+
+// File actions (view all, cancel)
+
+.cb-file-options {
+  border-bottom: 1px solid #ddd;
+  padding: 6px;
+  li {
+    display: inline-block;
+  }
+}
+
+// File list modes selector, applied over h4
+
+.cb-file-list-mode-select {
+  position: relative;
+  .modes {
+    position: absolute;
+    right: 32px;
+    top: 0px;
+    .mode {
+      padding: 0 4px;
+      display: inline-block;
+      color: @grayDark;
+      font-weight: normal;
+      font-size: 14px;
+      &.active,
+      &:hover,
+      &:active,
+      &:focus {
+        color: @orange;
+      }
+    }
+  }
+}
+
+// Context browser legend
+
+.cb-legend {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  .cb-legend-open {
+    font-size: 24px;
+    color: @grayLight;
+    &:hover,
+    &:active {
+      color: @grayDark;
+    }
+  }
+  .cb-legend-container {
+    background-color: rgba(255, 255, 255, .8);
+    border: 1px solid @grayLight;
+    border-radius: 4px;
+    box-shadow: 1px 1px 0 rgba(125, 125, 125, .15);
+    padding: 10px;
+    position: relative;
+    .cb-legend-close {
+      display: block;
+      position: absolute;
+      color: @gray;
+      top: -5px;
+      right: -5px;
+      padding: 3px 4px;
+      background-color: @white;
+      border: 3px solid @gray;
+      border-radius: 12px;
+      &:hover {
+        background-color: @gray;
+        color: @white;
+      }
+    }
+    li {
+      position: relative;
+      padding-left: 18px;
+    }
+    li:before {
+      content: "";
+      width: 12px;
+      height: 12px;
+      border-radius: 10px;
+      position: absolute;
+      top: 4px;
+      left: 0px;
+    }
+  }
+}
+
+// Context browser SVG
+
+text {
+  font-weight: 300;
+  font-family: Arial;
+  font-size: 12px;
+  cursor: default;
+  .user-select(none);
+}
+
+.graph-attach {
+
+}
+
+.nodes {
+  .node,
+  .node * {
+    cursor: pointer;
+  }
+  .content {
+    stroke: #333;
+    stroke-width: 1px;
+  }
+  // Active nodes
+  .active {
+    rect.content {
+      stroke-width: 4px;
+    }
+  }
+  // Disabled nodes
+  .disabled {
+
+  }
+  // Hovering effect
+  .hover {
+    .content {
+      fill: lighten(@blue, 50%) !important;
+    }
+    text {
+      fill: @black !important;
+    }
+  }
+  // Some color contrast tweaking
+  .level-artwork-record text,
+  .level-supporting-technology-record text { fill: @white; }
+}
+
+.edgeLabels {
+  rect {
+    fill: rgba(160, 160, 160, .8);
+    border: 1px solid #333;
+    padding: 4px;
+  }
+}
+
+.edgePaths {
+  path {
+    stroke: #999;
+    stroke-width: 0.5px;
+    fill: none;
+  }
+  .r-hierarchical path {
+
+  }
+  .r-associative path {
+    stroke: red;
+    stroke-width: 1px;
+    cursor: pointer;
+  }
+}
+
+// Icons
+.expandCollapseIcons g,
+.supportingTechnologyIcons g {
+  cursor: pointer;
+}
+
+// Used by renderer.js
+.fa-icon {
+  cursor: pointer;
+  color: #ff8800;
+  font-family: FontAwesome;
+}

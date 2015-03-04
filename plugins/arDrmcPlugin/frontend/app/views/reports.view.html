@@ -1,0 +1,83 @@
+<div class="row">
+  <div class="span12">
+    <div id="main-column">
+
+      <h1>{{ title }}</h1>
+
+      <section class="breadcrumb">
+        <ul>
+          <li><a ui-sref="main.search.entity({ entity: 'reports' })">Reports</a></li>
+          <li>
+            <span ng-if="!savedReport">New report</span>
+            <span ng-if="savedReport">Saved report: {{ reportName || 'Untitled' }}</span>
+          </li>
+        </ul>
+      </section>
+
+      <div class="content">
+
+        <section>
+          <div class="menu-list">
+            <ul class="menu-list-left">
+              <li><h2>Report overview</h2></li>
+            </ul>
+            <ul class="menu-list-right nav nav-pills">
+              <li>
+                <a href ng-if="!savedReport" ng-click="openSaveReportModal()" class="drmc-icon-save"><i class="icon-save"></i>Save</a>
+              </li>
+              <li>
+                <a target="_self" ng-href="{{ downloadCsvLink }}" class="drmc-icon-download">Download (CSV)</a>
+              </li>
+            </ul>
+          </div>
+        </section>
+
+        <section>
+          <div class="field" ng-if="reportName">
+            <h3>Name</h3>
+            <div>
+              {{ reportName }}
+            </div>
+          </div>
+          <div class="field" ng-if="reportDescription">
+            <h3>Description</h3>
+            <div>
+              {{ reportDescription }}
+            </div>
+          </div>
+           <div class="field" ng-if="reportUser">
+            <h3>Saved by</h3>
+            <div>
+              {{ reportUser }}
+            </div>
+          </div>
+          <div class="field" ng-if="reportDate">
+            <h3>Saved at</h3>
+            <div>
+              {{ reportDate | date:'short' }}
+            </div>
+          </div>
+          <div class="field">
+            <h3>Date range</h3>
+            <div ng-if="reportParams.from || reportParams.to">
+              <div ng-if="reportParams.from">
+                From: {{ reportParams.from | date:'short' }}
+              </div>
+              <div ng-if="reportParams.to">
+                To: {{ reportParams.to | date:'short' }}
+              </div>
+            </div>
+            <div ng-if="!reportParams.from && !reportParams.to">
+              All time
+            </div>
+          </div>
+        </section>
+
+      </div>
+
+      <!-- Include nested report view -->
+      <div ng-include="include"></div>
+
+    </div>
+  </div>
+</div>

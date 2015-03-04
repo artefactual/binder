@@ -1,0 +1,414 @@
+// New to Flexbox? Have this somewhere close if you are planning to edit the
+// following stylesheet: http://css-tricks.com/snippets/css/a-guide-to-flexbox/
+
+// Flexbox layout for body and sidebar(s)
+
+.digital-object-viewer {
+  display: flex;
+  flex-flow: row nowrap;
+  align-items: stretch;
+  justify-content: flex-start;
+}
+
+.dov-modal-body {
+  flex: 1 1 auto; // Flexible, absorb free space
+  overflow: hidden; // Avoid content overflow
+}
+
+.dov-modal-sidebar {
+  flex: 0 0 400px; // Inflexible.
+}
+
+// Flexbox layout for the digital object viewer body
+
+.dov-modal-body {
+  display: flex;
+  flex-flow: column nowrap;
+  align-items: stretch;
+}
+
+.dov-modal-body-header {
+  flex: 0 0 64px; // Inflexible
+}
+
+.dov-modal-body-content {
+  flex: 1 1 auto; // Flexible, absorb free space
+  overflow: hidden; // Avoid content overflow
+}
+
+// Flexbox layout for the header
+
+.dov-modal-body-header {
+  display: flex;
+  flex-flow: row nowrap;
+  justify-content: space-between;
+  align-items: stretch;
+
+  .media-type-icon {
+    flex: 0 1 64px;
+  }
+
+  .pager-links {
+    flex: 0 1 auto;
+  }
+
+  .close-button {
+    align-self: flex-start;
+    flex: 0 1 32px;
+  }
+}
+
+// Flexbox layout for the compare view
+
+.dov-compare-view {
+  display: flex;
+  flex-flow: column nowrap;
+  align-items: stretch;
+}
+
+.dov-compare-view-header {
+  flex: 0 0 50px; // Inflexible
+}
+
+.dov-compare-view-body {
+  flex: 1 1 auto; // Flexible, absorb free space.
+  overflow-y: auto;
+}
+
+.dov-compare-view-footer {
+  flex: 0 0 50px; // Inflexible
+}
+
+// Flexbox layout for the compare view footer
+
+.dov-compare-view-footer {
+  display: flex;
+  flex-flow: row nowrap;
+  align-items: center;
+  justify-content: space-between;
+}
+
+// Flexbox layout for the compare list (ul tag, thumnails)
+
+.dov-compare-list {
+  display: flex;
+  flex-flow: row wrap;
+  justify-content: center; // flex-start;
+  list-style: none;
+  li {
+    flex: 0 1 240px;
+    height: 180px;
+    position: relative;
+    .footer {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      .text-overflow();
+      margin: 0;
+      background-color: @black;
+      opacity: 0.8;
+      color: @white;
+      padding: 5px;
+    }
+  }
+}
+
+// Flexbox layout in pager links
+
+.dov-modal-body-header .pager-links {
+  display: flex;
+  flex-flow: row nowrap;
+  justify-content: center;
+  align-items: center;
+  .grid-pager {
+    align-self: flex-end;
+  }
+}
+
+// Header: media icon, pager, close button...
+
+.dov-modal-body-header {
+
+  .media-type-icon {
+    text-align: center;
+    a {
+      line-height: 64px;
+      .fa-icon-set(@white);
+      font-size: 32px;
+    }
+  }
+
+  .pager-links {
+    color: @white;
+  }
+
+  .grid-pager {
+    text-align: center;
+  }
+
+  .drmc-icon-grid,
+  .drmc-icon-arrow-left,
+  .drmc-icon-arrow-right {
+    &:before {
+      .fa-icon-set(@white);
+      padding: 0 10px;
+      font-size: 24px;
+    }
+    &.disabled {
+      opacity: 0.1;
+      cursor: default;
+    }
+  }
+
+  .close-button {
+    text-align: center;
+    padding-top: 7px;
+    .drmc-icon-sidex {
+      .fa-icon-set(@white);
+      font-size: 24px;
+    }
+  }
+
+}
+
+// Viewport settings for the different media types
+// To allow resize images/videos based on the width and the height
+// without loosing the aspect ratio, a content with absolute position is needed.
+// That's way the content is not using a Flexbox layout. Refs #7893
+
+.dov-modal-body-content {
+  position: relative;
+  margin: 20px;
+
+  .video,
+  .text,
+  .image,
+  .audio {
+    text-align: center;
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+  }
+
+  .video video,
+  .image img,
+  .audio audio {
+    max-width: 100%;
+    max-height: 100%;
+  }
+
+  .text object {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    width: 100%;
+    height: 100%;
+  }
+}
+
+// Sidebar
+
+.dov-modal-sidebar {
+  border-top: 3px solid transparent;
+  width: 400px;
+  max-width: 400px;
+  background-color: @white;
+  overflow-y: auto;
+
+  &:not(.first) {
+    border-left: 1px solid @grayLighter;
+  }
+
+  // Top border to highlight active sidebar
+  &.active {
+    border-top: 3px solid @orange;
+  }
+
+  // Top border for only one sidebar view
+  &.unique {
+    border-top: transparent !important;
+  }
+
+  .content {
+    // Cancel inherited properties
+    box-shadow: none;
+    border: 0px;
+    section {
+      border: 0px;
+    }
+
+    section:first-child {
+      border-top: 1px solid @grayLighter !important;
+      margin-top: 10px;
+    }
+  }
+
+  // From base style, makes field names wider
+  .content .field {
+    > h3 {
+      width: 35%;
+    }
+    > div {
+      margin-left: 35%;
+      overflow: auto;
+    }
+  }
+
+  .content {
+    h2 {
+      color: @drmcGrayDark;
+      cursor: pointer;
+    }
+    h4 {
+      color: @drmcGrayDark;
+      font-size: 14px;
+      margin-left: 10px;
+    }
+    h5 {
+      text-transform: uppercase;
+      font-size: 11px;
+      font-family: 'Open Sans Semibold';
+      color: @grayLight;
+      line-height: 18px;
+      margin: 0 0 0 18px;
+      padding: 0 10px 0 0;
+    }
+  }
+
+  // Toggle icon
+  .dov-modal-toggle {
+    float: right;
+    &:before {
+      .fa-icon-set (@orange);
+      content: "\f103";
+    }
+    &.active:before {
+      content: "\f102";
+    }
+  }
+
+  pre {
+    border: 0;
+  }
+}
+
+// Quick info heading widget in the sidebar.
+
+.quick-info {
+  height: 70px;
+  display: flex;
+  flex-flow: row nowrap;
+  justify-content: space-between;
+  // Make sure that large thumbs don't break the layout
+  overflow: hidden;
+  .clearfix();
+  margin-top: 10px;
+}
+
+.quick-info-thumb {
+  flex: 0 1 80px;
+  align-self: center;
+  .thumb {
+    margin: 0 auto;
+  }
+}
+
+.quick-info-title {
+  flex: 1 1 auto;
+  h4 {
+    margin: 0;
+    padding-right: 20px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  h4:before {
+    .fa-icon-set(@grayLight, 4px);
+  }
+}
+
+.quick-info-close {
+  flex: 0 0 20px;
+  text-align: center;
+  .drmc-icon-close {
+    display: block;
+    width: 20px;
+    height: 20px;
+  }
+  .drmc-icon-close:before {
+    .fa-icon-set(@gray);
+    font-size: 18px;
+  }
+}
+
+// Compare view
+
+.dov-compare-view {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  overflow: hidden;
+  background-color: @black;
+  .user-select(none);
+}
+
+.dov-compare-view-header {
+  background-color: @white;
+  h3 {
+    margin: 0;
+    line-height: 50px;
+    padding-left: 8px;
+  }
+  .sidex {
+    float: right;
+    color: @black;
+    padding: 0 4px;
+  }
+}
+
+.dov-compare-view-body {
+  background-color: @grayDark;
+  overflow: auto;
+  ul {
+    margin: 0;
+  }
+}
+
+.dov-compare-view-footer {
+  background-color: rgba(0, 0, 0, .15);
+  .c-btn {
+    background-color: @grayDark;
+    margin-right: 10px;
+    color: @white;
+  }
+  .help {
+    color: @grayLight;
+    margin: 0;
+    padding-right: 20px;
+    code {
+      background-color: rgba(255, 255, 255, .25);
+      border-color: transparent;
+      font-weight: bold;
+    }
+  }
+}
+
+.dov-compare-list {
+  li {
+    cursor: pointer;
+    user-select: none;
+    margin: 1%;
+    border: 3px solid @grayDarker;
+    box-shadow: 0 0 4px rgba(0, 0, 0, .25);
+    border-radius: 3px;
+    background-color: @black;
+    &.active {
+      border-color: @orange !important;
+    }
+    &:hover {
+      border-color: @blue;
+    }
+  }
+  img {
+    height: 100%;
+  }
+}

@@ -1,0 +1,254 @@
+
+// Header
+// TODO: fix this in AtoM!
+
+.drmc #site-name {
+  margin-left: 20px;
+  margin-right: 40px;
+}
+
+// Header menu
+// TODO: this should be possible in Dominion by using bs2?
+
+.top-dropdown-container .divider {
+  height: 1px;
+  margin: 9px 1px;
+  overflow: hidden;
+  background-color: #e5e5e5;
+  border-bottom: 1px solid #fff;
+}
+
+// Imports all styles from #content
+// TODO: fix this!
+
+.content {
+  margin-bottom: 1em;
+  #content();
+}
+
+// Titles
+
+h1.drmc-title {
+  padding-left: 40px;
+  position: relative;
+  &:before {
+    border-radius: 30px;
+    width: 30px;
+    height: 30px;
+    content: "";
+    position: absolute;
+    left: 0px;
+    top: 6px;
+    box-shadow: 2px 2px 2px rgba(25, 25, 25, .15);
+  }
+}
+
+// Header links (#top-bar)
+
+#reports-menu > a:before {
+  content: '\f0c5';
+}
+
+// Menu lists
+// TODO: simplify
+
+.menu-list {
+  border-top: 1px solid @borderLineColor;
+  border-bottom: 1px solid @borderLineColor;
+  font-size: .9em;
+  .clearfix();
+}
+
+.menu-list li > a {
+  padding-right: 2px;
+  padding-left: 7px;
+  &:last-child {
+    padding-right: 6px;
+  }
+}
+
+.menu-list-left {
+  float: left;
+  h2 {
+    padding-right: 0;
+    border-top: none !important;
+    border-bottom: none !important;
+    margin-right: 0px;
+  }
+  li {
+    border: none !important; //still doubling border -> fix this
+  }
+}
+
+.menu-list-right {
+  float: right;
+  margin-top: 3px !important;
+  li a {
+    color: @orange;
+    &:before {
+      .fa-icon-set (@grayLight);
+      padding-right: 4px;
+    }
+  }
+}
+
+// TODO: What is this for?
+
+.menu-list-right li,
+.dc-edit-type ul li,
+.dc-edit-coverage ul li {
+  border-bottom: none;
+  li {
+    a { color: @orange; }
+    a:hover { border-bottom: none; }
+    a:before {
+      .fa-icon-set(@grayLight);
+      padding-right: 4px;
+    }
+  }
+  .menu-badge {
+    margin-top: 6px;
+    margin-right: 8px;
+  }
+}
+
+// This is for embedded tables with sorting like the on the AIP overview or
+// the AIP file list. It includes some styles for the sorting elements. Also
+// used in reports, etc...
+
+.browse-view-list {
+
+  padding: 20px;
+
+  table th {
+    font-weight: normal;
+  }
+
+  .sort-label {
+    color: @black;
+  }
+
+  .selected .sort-label {
+    text-decoration: underline;
+  }
+
+  .sort-icon {
+    .fa-icon-set(@gray, 4px);
+    font-size: 13px;
+    margin-top: 1px;
+    color: @grayLight;
+    content: "\f106";
+  }
+
+  .sort-asc .sort-icon:after  { content: "\f106"; }
+  .sort-desc .sort-icon:after { content: "\f107"; }
+
+  .options {
+    text-align: right;
+  }
+
+  .block-detail {
+    color: @grayLight;
+    display: block;
+  }
+
+  .size {
+    text-align: right;
+  }
+
+}
+
+// Tabset directive doesn't use href, force cursor
+
+.tabbable .nav a {
+  cursor: pointer;
+}
+
+// Thumbnails (see DigitalObjectThumbnailDirective)
+
+.thumb {
+}
+
+.thumb-icon {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  .icon {
+    color: @gray;
+    text-shadow: 1px 1px 1px @grayLighter;
+    font-size: 60px;
+  }
+}
+
+.thumb-preview {
+  background-size: cover; // contain? auto?
+  background-repeat: no-repeat;
+  background-position: center center;
+}
+
+// DRMC colors
+
+.drmc-color-aip:before                           { background-color: @drmcNodeAip; }
+.drmc-color-supporting-technology-record:before  { background-color: @drmcNodeSupportingTechnologyRecord; }
+.drmc-color-artwork-record:before                { background-color: @drmcNodeArtworkRecord; }
+.drmc-color-description:before                   { background-color: @drmcNodeDescription; }
+.drmc-color-component:before                     { background-color: @drmcNodeComponent; }
+.drmc-color-artist-supplied-master:before        { background-color: @drmcNodeArtistSuppliedMaster; }
+.drmc-color-artist-verified-proof:before         { background-color: @drmcNodeArtistVerifiedProof; }
+.drmc-color-archival-master:before               { background-color: @drmcNodeArchivalMaster; }
+.drmc-color-exhibition-format:before             { background-color: @drmcNodeExhibitionFormat; }
+.drmc-color-documentation:before                 { background-color: @drmcNodeDocumentation; }
+.drmc-color-miscellaneous:before                 { background-color: @drmcNodeMiscellaneous; }
+.drmc-color-file:before                          { background-color: @drmcNodeFile; }
+
+// Context browser node background colours
+
+.level-aip                           .content { fill: @drmcNodeAip; }
+.level-supporting-technology-record  .content { fill: @drmcNodeSupportingTechnologyRecord; }
+.level-artwork-record                .content { fill: @drmcNodeArtworkRecord; }
+.level-description                   .content { fill: @drmcNodeDescription; }
+.level-component                     .content { fill: @drmcNodeComponent; }
+.level-artist-supplied-master        .content { fill: @drmcNodeArtistSuppliedMaster; }
+.level-artist-verified-proof         .content { fill: @drmcNodeArtistVerifiedProof; }
+.level-archival-master               .content { fill: @drmcNodeArchivalMaster; }
+.level-exhibition-format             .content { fill: @drmcNodeExhibitionFormat; }
+.level-documentation                 .content { fill: @drmcNodeDocumentation; }
+.level-miscellaneous                 .content { fill: @drmcNodeMiscellaneous; }
+
+// Special scroll for DRMC
+
+::-webkit-scrollbar {
+  background-color: rgba(0, 0, 0, 0);
+}
+
+::-webkit-scrollbar:hover {
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+::-webkit-scrollbar:horizontal {
+  height: 10px;
+}
+
+::-webkit-scrollbar:vertical {
+  width: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.3);
+  -webkit-border-radius: 100px;
+  background-clip: padding-box;
+  border: 2px solid rgba(0, 0, 0, 0);
+}
+
+::-webkit-scrollbar-thumb:horizontal {
+  min-width: 10px;
+}
+
+::-webkit-scrollbar-thumb:vertical {
+  min-height: 10px;
+}
+
+::-webkit-scrollbar-thumb:active {
+  background: rgba(0, 0, 0, 0.6);
+  -webkit-border-radius: 100px;
+}

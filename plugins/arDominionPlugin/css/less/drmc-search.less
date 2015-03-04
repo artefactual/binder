@@ -1,0 +1,186 @@
+// Search heading, contains current query and saved search tab (see below)
+
+.search-heading {
+  margin-top: 10px;
+  font-size: 24px;
+  div, span {
+    display: inline-block;
+    line-height: 50px;
+  }
+}
+
+// Current query label in search results
+
+.search-current-query {
+  line-height: 50px;
+  margin-bottom: -4px;
+  .prefix {
+    color: #999;
+  }
+  .value {
+  }
+  a {
+    color: #999;
+    font-size: 18px;
+  }
+  a:hover {
+    color: #666;
+  }
+}
+
+// Name of the saved search
+
+.saved-search-tag {
+  background-color: @grayLight;
+  color: @white;
+  margin-right: 4px;
+  padding: 0 12px;
+  border-radius: 4px;
+  box-shadow: inset 2px 2px 2px rgba(0, 0, 0, .15), inset -2px -2px 2px rgba(0, 0, 0, .15);
+  &:before {
+    .fa-icon-set(@white, 12px);
+    content: '\f0c7'; // Disk icon
+  }
+}
+
+// Heading with count
+
+.title-search-browser {
+  padding-left: 40px;
+  position: relative;
+  &:before {
+    position: absolute;
+    left: 0px;
+    top: 10px;
+    font-size: 34px;
+    content: '\f0c7'; // Disk icon
+    .fa-icon-set(@gray, 8px);
+  }
+}
+
+// Header search tabs
+
+.search-tabs {
+  ul {
+    margin-top: 10px;
+    margin-bottom: 10px;
+  }
+  li a {
+    position: relative;
+    padding-left: 30px;
+    &:before {
+      border-radius: 14px;
+      width: 14px;
+      height: 14px;
+      content: "";
+      position: absolute;
+      left: 8px;
+      top: 11px;
+    }
+  }
+  .active a:before {
+    box-shadow: 1px 1px 1px rgba(125, 125, 125, .3);
+  }
+  .drmc-icon-searches {
+    &:before {
+      font-size: 18px;
+      margin-top: -2px;
+      .fa-icon-set(@gray, 10px);
+      content: '\f0c7';
+      box-shadow: none !important;
+    }
+  }
+}
+
+// Header search popover
+
+.search-popover {
+  section {
+    position: relative;
+    &:before {
+      border-radius: 14px;
+      width: 20px;
+      height: 20px;
+      content: "";
+      position: absolute;
+      left: 12px;
+      top: 11px;
+      box-shadow: 1px 1px 1px rgba(125, 125, 125, .3);
+    }
+  }
+  .search-realm {
+    margin-top: 8px;
+  }
+}
+
+// Facet range picker
+
+.facet .range-picker {
+  margin-top: 5px;
+
+  .range-picker-buttons {
+    text-align: right;
+    button {
+      margin-left: 5px;
+    }
+  }
+
+  .range-picker-header p {
+    background-color: @grayLighter;
+    color: @gray;
+    &:after {
+      color: @gray;
+      content: "\f107";
+    }
+    &:hover {
+      background-color: @grayLight;
+      color: @white;
+      &:after {
+        color: @white;
+      }
+    }
+  }
+
+  .range-picker-body {
+    display: none;
+    padding: 5px;
+  }
+
+  &.open {
+    .range-picker-header p {
+      &:after {
+        content: "\f106";
+      }
+      &:hover {
+        background-color: @grayLight;
+        color: @white;
+        &:after {
+          color: @white;
+        }
+      }
+    }
+
+    .range-picker-body {
+      display: block;
+      .animation(fadeInDown, .2s);
+    }
+  }
+}
+
+#main-column #save-search {
+  margin-top: 30px;
+  text-align: right;
+
+  a {
+    color: @gray;
+
+    i:before {
+      margin-right: 10px;
+      font-size: 20px;
+    }
+
+    &:hover {
+      color: @orange;
+    }
+  }
+}

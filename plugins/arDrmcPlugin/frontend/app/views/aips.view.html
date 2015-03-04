@@ -1,0 +1,165 @@
+<div class="row-fluid">
+
+  <div class="span12">
+
+    <h1 class="drmc-title drmc-color-aip">{{ aip.name }}</h1>
+
+    <section class="breadcrumb">
+      <ul>
+        <li><a ui-sref="main.search.entity({ entity: 'aips'})">AIPs</a></li>
+        <li><span>{{ aip.name }}</span></li>
+      </ul>
+    </section>
+
+  </div>
+
+</div>
+
+<div class="row-fluid">
+
+  <div class="span12">
+    <div id="main-column">
+
+      <section ng-if="!files.length" class="ng-cloak">
+        <div class="alert alert-info">
+          No files have been found on this AIP.
+        </div>
+      </section>
+
+      <div class="content">
+
+        <!-- AIP Details -->
+        <section>
+          <div class="menu-list">
+            <ul class="menu-list-left">
+              <li><h2>AIP details</h2></li>
+            </ul>
+          </div>
+          <div>
+            <div class="field">
+              <h3>AIP name</h3>
+              <div>{{ aip.name }}</div>
+            </div>
+            <div class="field">
+              <h3>Class</h3>
+              <div><a href ng-click="openReclassifyModal(aip)">{{ aip.type.name || 'Unclassified' }}</a></div>
+            </div>
+            <div class="field">
+              <h3>UUID</h3>
+              <div>{{ aip.uuid }}</div>
+            </div>
+            <div class="field">
+              <h3>Size</h3>
+              <div>{{ aip.size | UnitFilter:2 }}</div>
+            </div>
+            <div class="field">
+              <h3>Number of objects</h3>
+              <div>{{ aip.digital_object_count }}</div>
+            </div>
+            <div class="field">
+              <h3>Part of</h3>
+              <div>
+                <a ng-if="aip.part_of.level_of_description_id == artworkId" ui-sref="main.works.view({ id: aip.part_of.id })">{{ aip.part_of.title }}</a>
+                <a ng-if="aip.part_of.level_of_description_id == techId" ui-sref="main.technology-records.view({ id: aip.part_of.id })">{{ aip.part_of.title }}</a>
+              </div>
+            </div>
+            <div class="field" ng-if="aip.description != undefined">
+              <h3>Description</h3>
+              <div>{{ aip.description }}</div>
+            </div>
+            <div class="field">
+              <h3>Creation date</h3>
+              <div>{{ aip.created_at | date:'short' }}</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Files, if available -->
+        <section ng-if="files.length">
+
+          <div class="menu-list">
+            <ul class="menu-list-left">
+              <li><h2>AIP file list</h2></li>
+            </ul>
+            <ul class="menu-list-right nav nav-pills">
+              <li><a href ng-click="downloadAip()" class="drmc-icon-download" ng-show="user.canContribute()">Download AIP</a>
+            </ul>
+          </div>
+
+          <!-- AIP browser -->
+          <div class="browse-view-list">
+            <table class="table table-bordered">
+              <thead>
+                <th>Name</th>
+                <th>PUID</th>
+                <th>MIME</th>
+                <th colspan="2">Size</th>
+              </thead>
+              <tbody>
+                <tr ng-repeat="item in files track by $index">
+                  <td><a href ng-click="openViewer(files, $index)">{{ item.filename }}</a></td>
+                  <td>{{ item.puid || 'N/A' }}</td>
+                  <td>{{ item.mime_type || 'N/A' }}</td>
+                  <td>{{ item.byte_size | UnitFilter:2 }}</td>
+                  <td><a href ng-click="downloadFile(item)" ng-show="user.canEdit()">Download</a></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- Fixity Reports -->
+        <section ng-if="fixityReports != undefined">
+
+          <div class="menu-list">
+            <ul class="menu-list-left">
+              <li><h2>Fixity reports</h2></li>
+            </ul>
+            <ul class="menu-list-right nav nav-pills">
+              <li>
+                Status:&nbsp&nbsp
+                <span ng-if="fixityFailsCount > 0" class="badge menu-badge badge-important">{{ fixityFailsCount }}</span>
+                <span ng-if="fixityFailsCount == 0" class="badge menu-badge badge-success">{{ recoveryPending ? 'PENDING' : 'OK' }}</span>
+              </li>
+            </ul>
+          </div>
+
+          <div class="browse-view-list">
+            <table class="table table-bordered">
+              <thead>
+                <tr>
+                  <th>Report ID</th>
+                  <th>Start time</th>
+                  <th>End time</th>
+                  <th>Duration</th>
+                  <th>Outcome</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr ng-repeat="report in fixityReports" ng-class="{ 'success': report.success, 'error': report.success === false, 'info': report.id === undefined }">
+                  <td>{{ report.id ? report.id : 'AIP recovery' }}</td>
+                  <td><span ng-if="report.time_started !== undefined">{{ (report.time_started | date:'short') || 'none' }}</span></td>
+                  <td><span ng-if="report.time_completed !== undefined">{{ (report.time_completed | date:'short') || 'none' }}</span></td>
+                  <td><span ng-if="report.duration !== undefined">{{ (report.duration | ConvertSecondsFilter) || 'none' }}</span></td>
+                  <td ng-if="report.success === undefined">In progress</td>
+                  <td ng-if="report.success !== undefined">{{ report.success ? 'Success' : 'Failed' }}
+                    <span ng-show="report.recovery_message" class="recovery-status label {{ report.success ? 'label-success' : 'label-important' }}">
+                      {{ report.recovery_message }}
+                    </span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+
+          </div>
+        </section>
+
+      </div>
+
+      <ar-pager items-per-page="{{ criteria.limit }}" page="page"></ar-pager>
+
+    </div>
+
+  </div>
+
+</div>

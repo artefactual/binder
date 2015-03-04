@@ -1,0 +1,116 @@
+<header id="top-bar">
+
+  <h1 id="site-name">
+    <a ui-sref="main.dashboard">Binder</a>
+  </h1>
+
+  <div id="search-bar">
+
+    <!-- Header search box -->
+    <ar-search-box></ar-search-box>
+
+    <!-- Browse menu -->
+    <div id="browse-menu">
+      <a class="top-item top-dropdown" data-toggle="dropdown">Browse</a>
+      <div class="top-dropdown-container">
+        <div class="top-dropdown-arrow">
+          <div class="arrow"></div>
+        </div>
+        <div class="top-dropdown-header">Browse</div>
+        <div class="top-dropdown-body">
+          <ul>
+            <li><a href ui-sref="main.search.entity({ entity: 'works' })">Artwork records</a></li>
+            <li><a href ui-sref="main.search.entity({ entity: 'components' })">Components</a></li>
+            <li><a href ui-sref="main.search.entity({ entity: 'aips' })">AIPs</a></li>
+            <li><a href ui-sref="main.search.entity({ entity: 'files' })">Files</a></li>
+            <li><a href ui-sref="main.search.entity({ entity: 'technology-records' })">Supporting technology records</a></li>
+            <li><a href ui-sref="main.search.entity({ entity: 'searches' })">Saved searches</a></li>
+            <li class="divider"></li>
+            <li><a href ui-sref="main.tms.browser">TMS lookup</a></li>
+          </ul>
+        </div>
+        <div class="top-dropdown-bottom"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <nav>
+
+    <!-- User dropdown (login) -->
+    <div id="user-menu">
+
+      <!-- For authenticated users -->
+      <div ng-show="user">
+        <a class="top-item top-dropdown" data-toggle="dropdown" data-target="#">{{ user.username }}</a>
+        <div class="top-dropdown-container">
+          <div class="top-dropdown-arrow">
+            <div class="arrow"></div>
+          </div>
+          <div class="top-dropdown-header">
+            Hi, {{ user.username }}!
+          </div>
+          <div class="top-dropdown-body">
+            <ul>
+              <li><a href ng-click="logOut()">Log out</a></li>
+            </ul>
+          </div>
+          <div class="top-dropdown-bottom"></div>
+        </div>
+      </div>
+
+      <!-- For unauthenticated users -->
+      <div ng-hide="user">
+        <a ng-hide="user" class="top-item top-dropdown" ui-sref="login">Log in</a>
+      </div>
+
+    </div>
+
+    <!-- Reports menu -->
+    <div id="reports-menu" class="top-menu-link" data-toggle="tooltip" data-title="Reports">
+      <a href ui-sref="main.search.entity({ entity: 'reports' })" class="top-item">Reports</a>
+    </div>
+
+    <!-- Manage menu -->
+    <div id="manage-menu" class="top-menu-link" data-toggle="tooltip" data-title="Manage" ng-show="user.canAdministrate()">
+      <a class="top-item" data-toggle="dropdown" data-target="#">Manage</a>
+      <div class="top-dropdown-container">
+        <div class="top-dropdown-arrow">
+          <div class="arrow"></div>
+        </div>
+        <div class="top-dropdown-header">Manage</div>
+        <div class="top-dropdown-body">
+          <ul>
+            <li class="leaf" id="node_taxonomies">
+              <a target="_self" ng-href="{{ basePath }}/taxonomy/list">Taxonomies</a>
+              <a target="_self" ng-href="{{ basePath }}/user/list">Users</a>
+              <a target="_self" ng-href="{{ basePath }}/aclGroup/list">Groups</a>
+            </li>
+          </ul>
+        </div>
+        <div class="top-dropdown-bottom"></div>
+      </div>
+    </div>
+
+    <!-- Add menu -->
+    <div id="add-menu" class="top-menu-link" data-toggle="tooltip" data-title="Add">
+      <a class="top-item" data-toggle="dropdown" data-target="#">Add</a>
+      <div class="top-dropdown-container">
+        <div class="top-dropdown-arrow">
+          <div class="arrow"></div>
+        </div>
+        <div class="top-dropdown-header">Add</div>
+        <div class="top-dropdown-body">
+          <ul>
+            <li class="leaf">
+              <a href ng-click="openEditDcModal()">Supporting technology record</a>
+            </li>
+          </ul>
+        </div>
+        <div class="top-dropdown-bottom"></div>
+      </div>
+    </div>
+
+  </nav>
+
+</header>

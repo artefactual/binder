@@ -1,0 +1,118 @@
+<div id="search-form-wrapper">
+
+  <form name="form" ng-submit="submit()">
+
+    <input type="text" ng-model="query" placeholder="Search"/>
+
+    <div ng-show="showRealm" id="search-realm" class="search-popover">
+
+      <div ng-if="results != undefined">
+
+        <section class="drmc-color-aip" ng-if="results.totals.aips > 0">
+          <ul>
+            <li ng-repeat="(uuid, aip) in results.aips">
+              <a ng-click="clear()" ui-sref="main.aips.view({ uuid: uuid })" ng-bind-html="aip.name"></a>
+            </li>
+            <li class="showall">
+              <a href ng-click="showAll('aips')">all matching AIPs</a>
+            </li>
+          </ul>
+        </section>
+
+        <section class="drmc-color-artwork-record" ng-if="results.totals.artworks > 0">
+          <ul>
+            <li ng-repeat="(id, work) in results.artworks">
+              <a ng-click="clear()" ui-sref="main.works.view({ id: id })" ng-bind-html="work.title"></a>
+            </li>
+            <li class="showall">
+              <a href ng-click="showAll('works')">all matching Artworks</a>
+            </li>
+          </ul>
+        </section>
+
+        <section class="drmc-color-component" ng-if="results.totals.components > 0">
+          <ul>
+            <li ng-repeat="(id, comp) in results.components">
+              <a ng-click="clear()" ui-sref="main.works.view({ id: comp.artwork_id })" ng-bind-html="comp.title"></a>
+            </li>
+            <li class="showall">
+              <a href ng-click="showAll('components')">all matching Components</a>
+            </li>
+          </ul>
+        </section>
+
+        <section class="drmc-color-supporting-technology-record" ng-if="results.totals.technology_records > 0">
+          <ul>
+            <li ng-repeat="techRecord in results.technology_records">
+              <a ng-click="clear()" ui-sref="main.technology-records.view({ id: techRecord.collection_root_id })" ng-bind-html="techRecord.title"></a>
+            </li>
+            <li class="showall">
+              <a href ng-click="showAll('technology-records')">all matching Technology Records</a>
+            </li>
+          </ul>
+        </section>
+
+        <section class="drmc-color-file" ng-if="results.totals.files > 0" ng-controller="FileSearchCtrl">
+          <ul>
+            <li ng-repeat="(id, file) in results.files">
+              <a href ng-click="clear(); openViewer(file)" ng-bind-html="file.title"></a>
+            </li>
+            <li class="showall">
+              <a href ng-click="showAll('files')">all matching Files</a>
+            </li>
+          </ul>
+        </section>
+
+      </div>
+
+      <div class="search-realm">
+
+        <div>
+          <label>
+            <input type="radio" ng-model="realm" value="all"/>
+            All
+          </label>
+        </div>
+
+        <div>
+          <label>
+            <input type="radio" ng-model="realm" value="aips"/>
+            AIPs
+          </label>
+        </div>
+
+        <div>
+          <label>
+            <input type="radio" ng-model="realm" value="works"/>
+            Artwork records
+          </label>
+        </div>
+
+        <div>
+          <label>
+            <input type="radio" ng-model="realm" value="components"/>
+            Components
+          </label>
+        </div>
+
+        <div>
+          <label>
+            <input type="radio" ng-model="realm" value="technology-records"/>
+            Supporting technology records
+          </label>
+        </div>
+
+        <div>
+          <label>
+            <input type="radio" ng-model="realm" value="files"/>
+            Files
+          </label>
+        </div>
+
+      </div>
+
+    </div>
+
+  </form>
+
+</div>

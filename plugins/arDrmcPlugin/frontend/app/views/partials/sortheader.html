@@ -1,0 +1,8 @@
+<div ng-class="{
+    'selected': criteria.sort == field,
+    'sort-asc': criteria.sort_direction == 'asc' || criteria.sort_direction == undefined,
+    'sort-desc': criteria.sort_direction == 'desc'
+  }">
+  <a href ng-click="toggleSortDir()" class="sort-label">{{ label }}</a>
+  <a href ng-click="toggleSortDir()" class="sort-icon"></a>
+</div>
