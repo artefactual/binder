@@ -9,13 +9,19 @@ abstract class BaseAccessLog implements ArrayAccess
 
     ID = 'access_log.ID',
     OBJECT_ID = 'access_log.OBJECT_ID',
-    ACCESS_DATE = 'access_log.ACCESS_DATE';
+    DATE = 'access_log.DATE',
+    TYPE_ID = 'access_log.TYPE_ID',
+    USER_ID = 'access_log.USER_ID',
+    REASON = 'access_log.REASON';
 
   public static function addSelectColumns(Criteria $criteria)
   {
     $criteria->addSelectColumn(QubitAccessLog::ID);
     $criteria->addSelectColumn(QubitAccessLog::OBJECT_ID);
-    $criteria->addSelectColumn(QubitAccessLog::ACCESS_DATE);
+    $criteria->addSelectColumn(QubitAccessLog::DATE);
+    $criteria->addSelectColumn(QubitAccessLog::TYPE_ID);
+    $criteria->addSelectColumn(QubitAccessLog::USER_ID);
+    $criteria->addSelectColumn(QubitAccessLog::REASON);
 
     return $criteria;
   }
@@ -531,6 +537,20 @@ abstract class BaseAccessLog implements ArrayAccess
   public static function addJoinobjectCriteria(Criteria $criteria)
   {
     $criteria->addJoin(QubitAccessLog::OBJECT_ID, QubitObject::ID);
+
+    return $criteria;
+  }
+
+  public static function addJointypeCriteria(Criteria $criteria)
+  {
+    $criteria->addJoin(QubitAccessLog::TYPE_ID, QubitTerm::ID);
+
+    return $criteria;
+  }
+
+  public static function addJoinuserCriteria(Criteria $criteria)
+  {
+    $criteria->addJoin(QubitAccessLog::USER_ID, QubitUser::ID);
 
     return $criteria;
   }
