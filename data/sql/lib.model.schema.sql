@@ -14,14 +14,25 @@ CREATE TABLE `access_log`
 (
 	`id` INTEGER  NOT NULL AUTO_INCREMENT,
 	`object_id` INTEGER  NOT NULL,
-	`access_date` DATETIME,
+	`date` DATETIME,
+	`type_id` INTEGER  NOT NULL,
+	`user_id` INTEGER,
+	`reason` VARCHAR(1024),
 	PRIMARY KEY (`id`),
-	KEY `1`(`access_date`, `object_id`),
+	KEY `1`(`date`, `object_id`),
 	INDEX `access_log_FI_1` (`object_id`),
 	CONSTRAINT `access_log_FK_1`
 		FOREIGN KEY (`object_id`)
 		REFERENCES `object` (`id`)
-		ON DELETE CASCADE
+		ON DELETE CASCADE,
+	INDEX `access_log_FI_2` (`type_id`),
+	CONSTRAINT `access_log_FK_2`
+		FOREIGN KEY (`type_id`)
+		REFERENCES `term` (`id`),
+	INDEX `access_log_FI_3` (`user_id`),
+	CONSTRAINT `access_log_FK_3`
+		FOREIGN KEY (`user_id`)
+		REFERENCES `user` (`id`)
 )Engine=InnoDB;
 
 #-----------------------------------------------------------------------------
@@ -112,13 +123,14 @@ CREATE TABLE `aip`
 (
 	`id` INTEGER  NOT NULL,
 	`type_id` INTEGER,
-	`uuid` VARCHAR(36),
+	`uuid` VARCHAR(36)  NOT NULL,
 	`filename` VARCHAR(1024),
 	`size_on_disk` BIGINT,
 	`digital_object_count` INTEGER,
 	`created_at` DATETIME,
 	`part_of` INTEGER,
 	PRIMARY KEY (`id`),
+	UNIQUE KEY `aip_U_1` (`uuid`),
 	CONSTRAINT `aip_FK_1`
 		FOREIGN KEY (`id`)
 		REFERENCES `object` (`id`)
@@ -297,6 +309,70 @@ CREATE TABLE `event_i18n`
 		FOREIGN KEY (`id`)
 		REFERENCES `event` (`id`)
 		ON DELETE CASCADE
+)Engine=InnoDB;
+
+#-----------------------------------------------------------------------------
+#-- fixity_report
+#-----------------------------------------------------------------------------
+
+DROP TABLE IF EXISTS `fixity_report`;
+
+
+CREATE TABLE `fixity_report`
+(
+	`id` INTEGER  NOT NULL,
+	`success` TINYINT,
+	`message` VARCHAR(255),
+	`failures` TEXT,
+	`session_uuid` VARCHAR(36),
+	`aip_id` INTEGER,
+	`uuid` VARCHAR(36),
+	`time_started` DATETIME,
+	`time_completed` DATETIME,
+	PRIMARY KEY (`id`),
+	CONSTRAINT `fixity_report_FK_1`
+		FOREIGN KEY (`id`)
+		REFERENCES `object` (`id`)
+		ON DELETE CASCADE,
+	INDEX `fixity_report_FI_2` (`aip_id`),
+	CONSTRAINT `fixity_report_FK_2`
+		FOREIGN KEY (`aip_id`)
+		REFERENCES `aip` (`id`)
+		ON DELETE SET NULL
+)Engine=InnoDB;
+
+#-----------------------------------------------------------------------------
+#-- fixity_recovery
+#-----------------------------------------------------------------------------
+
+DROP TABLE IF EXISTS `fixity_recovery`;
+
+
+CREATE TABLE `fixity_recovery`
+(
+	`id` INTEGER  NOT NULL,
+	`success` TINYINT,
+	`message` VARCHAR(255),
+	`aip_id` INTEGER,
+	`time_started` DATETIME,
+	`time_completed` DATETIME,
+	`user_id` INTEGER,
+	`storage_service_event_id` INTEGER  NOT NULL,
+	PRIMARY KEY (`id`),
+	CONSTRAINT `fixity_recovery_FK_1`
+		FOREIGN KEY (`id`)
+		REFERENCES `object` (`id`)
+		ON DELETE CASCADE,
+	INDEX `fixity_recovery_FI_2` (`aip_id`),
+	CONSTRAINT `fixity_recovery_FK_2`
+		FOREIGN KEY (`aip_id`)
+		REFERENCES `aip` (`id`)
+		ON DELETE SET NULL,
+	INDEX `fixity_recovery_FI_3` (`user_id`),
+	CONSTRAINT `fixity_recovery_FK_3`
+		FOREIGN KEY (`user_id`)
+		REFERENCES `user` (`id`)
+		ON DELETE SET NULL
 )Engine=InnoDB;
 
 #-----------------------------------------------------------------------------
@@ -1038,6 +1114,41 @@ CREATE TABLE `rights_holder`
 		FOREIGN KEY (`id`)
 		REFERENCES `actor` (`id`)
 		ON DELETE CASCADE
+)Engine=InnoDB;
+
+#-----------------------------------------------------------------------------
+#-- saved_query
+#-----------------------------------------------------------------------------
+
+DROP TABLE IF EXISTS `saved_query`;
+
+
+CREATE TABLE `saved_query`
+(
+	`id` INTEGER  NOT NULL,
+	`type_id` INTEGER,
+	`scope` VARCHAR(50),
+	`name` VARCHAR(255),
+	`description` VARCHAR(1024),
+	`user_id` INTEGER,
+	`params` TEXT,
+	`created_at` DATETIME  NOT NULL,
+	`updated_at` DATETIME  NOT NULL,
+	PRIMARY KEY (`id`),
+	CONSTRAINT `saved_query_FK_1`
+		FOREIGN KEY (`id`)
+		REFERENCES `object` (`id`)
+		ON DELETE CASCADE,
+	INDEX `saved_query_FI_2` (`type_id`),
+	CONSTRAINT `saved_query_FK_2`
+		FOREIGN KEY (`type_id`)
+		REFERENCES `term` (`id`)
+		ON DELETE SET NULL,
+	INDEX `saved_query_FI_3` (`user_id`),
+	CONSTRAINT `saved_query_FK_3`
+		FOREIGN KEY (`user_id`)
+		REFERENCES `user` (`id`)
+		ON DELETE SET NULL
 )Engine=InnoDB;
 
 #-----------------------------------------------------------------------------

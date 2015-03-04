@@ -33,8 +33,10 @@ class QubitAccessLogObserver
     $object = $event['object'];
 
     $access = new QubitAccessLog;
+    $access->typeId = QubitTerm::ACCESS_LOG_STANDARD_ENTRY;
     $access->objectId = $object->id;
-    $access->accessDate = date('Y-m-d H:i:s');
+    $access->date = date('Y-m-d H:i:s');
+    $access->userId = $event->getSubject()->getUser()->getUserID();
 
     $access->save();
   }
