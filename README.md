@@ -82,7 +82,7 @@ not tracked by git) with the following contents:
       ldap_account_suffix: "@example.com"
       ldap_base_dn: DC=EXAMPLE,DC=COM
       ldap_domain_controllers: ad01.example.com
-      ldap_user_group: CN=AtoM users,OU=Archivists,OU=Groups,DC=EXAMPLE,DC=COM
+      ldap_user_group: CN=Binder users,OU=Archivists,OU=Groups,DC=EXAMPLE,DC=COM
 
 Finally clear the Symfony cache and restart your pool.
 
