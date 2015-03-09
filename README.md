@@ -1,15 +1,16 @@
-# DRMC
+# Binder
 
-DRMC (Digital Repository for Museum Collections) is an open source digital
-repository designed to meet the needs and complex digital preservation
-requirements of museum collections. The DRMC was created by Artefactual
-Systems and the Museum of Modern Art.
+Binder is an open source digital repository designed to meet the needs and
+complex digital preservation requirements of museum collections. Binder was
+created by Artefactual Systems and the Museum of Modern Art.
 
-The DRMC aims to facilitate digital collections care, management, and
+Binder aims to facilitate digital collections care, management, and
 preservation for time-based media and born-digital artworks and is built
 from integrating functionality of the Archivematica and AtoM projects.
 
-A presentation on the DRMC's functionality can be found here:
+A presentation on Binder's functionality (Binder was formerly known as the
+DRMC during development) can be found here:
+
 https://www.youtube.com/watch?v=HPebm5nh83o.
 
 # Table of contents
@@ -27,7 +28,7 @@ https://www.youtube.com/watch?v=HPebm5nh83o.
 See http://accesstomemory.org/wiki for instructions on how to perform the
 basic installation.
 
-You'll also need to install the DRMC interface. To do so on Ubuntu (tested
+You'll also need to install the Binder interface. To do so on Ubuntu (tested
 on Ubuntu 14.04), do the following:
 
 ```shell
@@ -47,7 +48,7 @@ npm install
 
 ### Storage service client configuration
 
-The Archivematica storage service handles storage of AIPs. The DRMC interfaces
+The Archivematica storage service handles storage of AIPs. Binder interfaces
 with it to allow the downloading of AIPs/AIP files and the recovery of AIPs.
 
 To interface with the Archivematica Storage Service, define these environment
@@ -99,7 +100,7 @@ development.
 Editor preferences are available in the <a href="https://github.com/artefactual/drmc/blob/master/.editorconfig">editor config</a>
 for easy use in common text editors. Read more and download plugins at<br /><a href="http://editorconfig.org"><a href='http://editorconfig.org'>http://editorconfig.org</a></a>.
 
-The DRMC was built on Access to Memory (AtoM) which is an application built
+Binder was built on Access to Memory (AtoM) which is an application built
 using the Symfony framework.
 
 See <a href='http://symfony-project.com'>http://symfony-project.com</a> for additional instructions on installing and<br />configuring a Symfony application.
@@ -116,7 +117,7 @@ Keep track of development and community news.
 ## Versioning
 
 For transparency into our release cycle and in striving to maintain backward
-compatibility, DRMC is maintained under the [Semantic Versioning guidelines](http://www.semver.org).
+compatibility, Binder is maintained under the [Semantic Versioning guidelines](http://www.semver.org).
 Sometimes we screw up, but we'll adhere to those rules whenever possible.
 
 
