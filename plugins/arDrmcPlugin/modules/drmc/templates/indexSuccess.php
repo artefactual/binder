@@ -6,8 +6,8 @@
     <?php include_title() ?>
     <link rel="shortcut icon" href="<?php echo public_path('favicon.ico') ?>"/>
     <?php include_stylesheets() ?>
-    <?php echo javascript_include_tag('/plugins/arDrmcPlugin/frontend/dist/DRMC.vendor.js') ?>
-    <?php echo javascript_include_tag('/plugins/arDrmcPlugin/frontend/dist/DRMC.app.js') ?>
+    <?php echo javascript_include_tag('/plugins/arDrmcPlugin/frontend/dist/Binder.vendor.js') ?>
+    <?php echo javascript_include_tag('/plugins/arDrmcPlugin/frontend/dist/Binder.app.js') ?>
   </head>
   <body ng-app="drmc" class="drmc" ng-controller="BodyCtrl">
 
