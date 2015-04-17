@@ -127,7 +127,6 @@ module.exports = function (grunt) {
           'node_modules/angular-ui-router/release/angular-ui-router.js',
           'vendor/angular-ui-router.js',
           'vendor/angular-ui.js',
-          'node_modules/ng-storage/ngStorage.js',
           'vendor/angular-hotkeys/hotkeys.js',
           '../../../vendor/bootstrap/js/bootstrap.js'
         ],

@@ -34,8 +34,7 @@
 
                 // store real X value as a label to be diplayed using a custom formatter
                 if (typeof lineData.xLabelFormat !== 'undefined') {
-                  if (lineData.xLabelFormat === 'yearAndMonth')
-                  {
+                  if (lineData.xLabelFormat === 'yearAndMonth') {
                     xLabels[i] = lineData.data[i].year + '-' + lineData.data[i].month;
                   } else {
                     console.log('Invalid xLabelFormat.');
