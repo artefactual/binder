@@ -1,6 +1,8 @@
 # Binder
 
+<div style="text-align:center">
 ![Binder logo](/images/binder-logo.png)
+</div>
 
 Binder is an open source digital repository management application, designed
 to meet the needs and complex digital preservation requirements of museum
