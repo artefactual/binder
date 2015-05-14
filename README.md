@@ -81,7 +81,7 @@ following values are just examples):
 
 ## Contributing
 
-Please read through our <a href="https://github.com/artefactual/binder/blob/master/CONTRIBUTING.md">contributing guidelines</a>.
+Please read through our <a href="https://github.com/artefactual/binder/blob/master/CONTRIBUTING">contributing guidelines</a>.
 Included are directions for opening issues, coding standards, and notes on
 development.
 
