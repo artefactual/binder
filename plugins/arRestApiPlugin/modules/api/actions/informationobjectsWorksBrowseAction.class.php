@@ -72,7 +72,7 @@ class ApiInformationObjectsWorksBrowseAction extends QubitApiAction
     $this->filterEsRangeFacet('createdFrom', 'createdTo', 'tmsObject.dateCreated', $queryBool);
     $this->filterEsRangeFacet('ingestedFrom', 'ingestedTo', 'aips.createdAt', $queryBool);
 
-    $this->filterEsFacetQuery('format', 'aips.digitalObjects.metsData.mediainfo.generalTracks.format', $queryBool, 'AND', array('noInteger' => true));
+    $this->filterEsFacetQuery('format', 'aips.digitalObjects.metsData.format.name', $queryBool, 'AND', array('noInteger' => true));
     $this->filterEsFacetQuery('videoCodec', 'aips.digitalObjects.metsData.mediainfo.videoTracks.codec', $queryBool, 'AND', array('noInteger' => true));
     $this->filterEsFacetQuery('audioCodec', 'aips.digitalObjects.metsData.mediainfo.audioTracks.codec', $queryBool, 'AND', array('noInteger' => true));
     $this->filterEsFacetQuery('resolution', 'aips.digitalObjects.metsData.mediainfo.videoTracks.resolution', $queryBool);
@@ -82,7 +82,7 @@ class ApiInformationObjectsWorksBrowseAction extends QubitApiAction
     $this->filterEsFacetQuery('bitDepth', 'aips.digitalObjects.metsData.mediainfo.videoTracks.bitDepth', $queryBool);
 
     // Add facets to the query
-    $this->facetEsQuery('Terms', 'format', 'aips.digitalObjects.metsData.mediainfo.generalTracks.format', $query);
+    $this->facetEsQuery('Terms', 'format', 'aips.digitalObjects.metsData.format.name', $query);
     $this->facetEsQuery('Terms', 'videoCodec', 'aips.digitalObjects.metsData.mediainfo.videoTracks.codec', $query);
     $this->facetEsQuery('Terms', 'audioCodec', 'aips.digitalObjects.metsData.mediainfo.audioTracks.codec', $query);
     $this->facetEsQuery('Terms', 'resolution', 'aips.digitalObjects.metsData.mediainfo.videoTracks.resolution', $query);
