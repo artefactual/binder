@@ -29,10 +29,12 @@ class ApiActivityIngestionAction extends QubitApiAction
     $sql = <<<EOL
 SELECT
   io.id,
+  io.level_of_description_id,
   io18n.title,
   aip.filename,
   aip.size_on_disk,
   aip.created_at,
+  aip.uuid,
   digital_object.path
 FROM
   aip
@@ -69,8 +71,10 @@ EOL;
 
       array_push($aipCreations, array(
         'id' => $item->id,
+        'level_of_description_id' => $item->level_of_description_id,
         'artwork_title' => $item->title,
         'aip_title' => $item->filename,
+        'aip_uuid' => $item->uuid,
         'size_on_disk' => $item->size_on_disk,
         'thumbnail_path' => $item->path,
         'created_at' => $createdAt

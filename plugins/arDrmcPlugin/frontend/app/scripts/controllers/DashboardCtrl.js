@@ -2,7 +2,7 @@
 
   'use strict';
 
-  angular.module('drmc.controllers').controller('DashboardCtrl', function ($scope, $q, $timeout, $filter, StatisticsService, FixityService, AIPService) {
+  angular.module('drmc.controllers').controller('DashboardCtrl', function ($scope, $q, $timeout, $filter, StatisticsService, FixityService, AIPService, SETTINGS) {
 
     var timer;
 
@@ -80,6 +80,9 @@
           yProperty: 'total',
           data: responses[7].data.results.creation
         }];
+        // Levels of description to determine part_of link in ingests tab
+        $scope.artworkId = parseInt(SETTINGS.drmc.lod_artwork_record_id);
+        $scope.techId = parseInt(SETTINGS.drmc.lod_supporting_technology_record_id);
       }, function (responses) {
         console.log('Something went wrong', responses);
       });

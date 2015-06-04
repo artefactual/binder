@@ -160,14 +160,17 @@
             <thead>
               <th>Date/time</th>
               <th>AIP</th>
-              <th>Artwork</th>
+              <th>Part of</th>
               <th>Size</th>
             </thead>
             <tbody>
               <tr ng-repeat="item in ingestionActivity | limitTo:10">
                 <td>{{ item.created_at }}</td>
-                <td>{{ item.aip_title }}</td>
-                <td>{{ item.artwork_title }}</td>
+                <td><a href ui-sref="main.aips.view({ uuid: item.aip_uuid })">{{ item.aip_title }}</a></td>
+                <td>
+                  <a ng-if="item.level_of_description_id == artworkId" ui-sref="main.works.view({ id: item.id })">{{ item.artwork_title }}</a>
+                  <a ng-if="item.level_of_description_id == techId" ui-sref="main.technology-records.view({ id: item.id })">{{ item.artwork_title }}</a>
+                </td>
                 <td>{{ item.size_on_disk | UnitFilter:2 }}</td>
               </tr>
               <tr ng-if="!ingestionActivity.length">
