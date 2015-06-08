@@ -31,6 +31,7 @@ class ApiInformationObjectsTreeAction extends QubitApiAction
     $sql = <<<EOL
 SELECT
   a.*,
+  property_i18n.value as component_number,
   CASE WHEN b.hits IS NULL THEN 0 ELSE 1 END supporting_technologies_count
 FROM
   (SELECT
@@ -57,6 +58,12 @@ LEFT JOIN
      AND term.taxonomy_id = ?
    GROUP BY subject_id
   ) b ON (a.id = b.subject_id)
+LEFT JOIN property
+  ON a.id = property.object_id
+  AND property.name = 'ComponentNumber'
+LEFT JOIN property_i18n
+  ON property.id = property_i18n.id
+  AND property.source_culture = property_i18n.culture
 EOL;
 
     $results = QubitPdo::fetchAll($sql, array(
@@ -96,6 +103,13 @@ EOL;
       {
         $item->title = 'Untitled';
       }
+
+      if (isset($item->component_number))
+      {
+        $item->title = $item->component_number . ' - ' . $item->title;
+      }
+
+      unset($item->component_number);
 
       if (!isset($target) || is_array($target))
       {
