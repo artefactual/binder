@@ -252,8 +252,13 @@
             return classes.join(' ');
           })
           .append('path')
-            .style('opacity', 0);
-            // .attr('marker-end', 'url(#arrowhead)');
+            .style('opacity', 0)
+            .attr('marker-end', function (e) {
+              var edge = g.edge(e);
+              if (typeof edge.type !== 'undefined' && edge.type === 'associative') {
+                return 'url(#arrowhead)';
+              }
+            });
 
     transition(svgEdgePaths.exit())
       .style('opacity', 0)
@@ -363,10 +368,10 @@
         .attr('refX', 8)
         .attr('refY', 5)
         .attr('markerUnits', 'strokeWidth')
-        .attr('markerWidth', 8)
-        .attr('markerHeight', 5)
+        .attr('markerWidth', 10)
+        .attr('markerHeight', 8)
         .attr('orient', 'auto')
-        .attr('style', 'fill: #333')
+        .attr('style', 'fill: red')
         .append('svg:path')
           .attr('d', 'M 0 0 L 10 5 L 0 10 z');
     }
