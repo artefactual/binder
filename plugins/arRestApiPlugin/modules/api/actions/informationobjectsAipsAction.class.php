@@ -49,6 +49,13 @@ class ApiInformationObjectsAipsAction extends QubitApiAction
     $this->facetEsQuery('TermsStats', 'type', 'type.id', $query, array(
       'valueField' => 'sizeOnDisk'));
 
+    // ES only gets 10 results if size is not set and we need all the hits
+    // to calculate the unclassified counts. This can be fixed adding an
+    // unclassified type value to the ES index to make the facet work with it
+    // or using the missing aggregation (ES 1.3)
+    // Max int32 value may cause OutOfMemoryError
+    $query->setSize(99999);
+
     // Assign query
     $query->setQuery($queryBool);
 
