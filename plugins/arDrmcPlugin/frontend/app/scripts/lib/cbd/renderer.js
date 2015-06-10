@@ -3,7 +3,7 @@
   'use strict';
 
   function Renderer () {
-    this.edgeInterpolate = 'bundle';
+    this.edgeInterpolate = 'monotone';
     this.edgeTension = 0.95;
     this.rankDir = 'RL';
   }
