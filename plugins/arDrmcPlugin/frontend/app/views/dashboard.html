@@ -214,14 +214,14 @@
     <!-- Storage -->
     <h3 class="fontello drmc-icon-chart-pie">Storage</h3>
     <tabset class="dashboard-rs-graph">
-      <tab heading="Department">
-        <ar:graph-pie data="{{ countByDepartment }}" width="200" unit-filter="artworks" class="graph-pie" color="colorA"></ar:graph-pie>
-      </tab>
+      <tab heading="Format">
+        <ar:graph-pie data="{{ storageFormats }}" width="200" unit-filter="size" class="graph-pie" color="colorC"></ar:graph-pie>
+      </tab>      
       <tab heading="Codec">
         <ar:graph-pie data="{{ storageCodecs }}" width="200" unit-filter="size" class="graph-pie" color="colorC"></ar:graph-pie>
       </tab>
-      <tab heading="Format">
-        <ar:graph-pie data="{{ storageFormats }}" width="200" unit-filter="size" class="graph-pie" color="colorC"></ar:graph-pie>
+      <tab heading="Department">
+        <ar:graph-pie data="{{ countByDepartment }}" width="200" unit-filter="artworks" class="graph-pie" color="colorA"></ar:graph-pie>
       </tab>
     </tabset>
 
