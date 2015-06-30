@@ -65,18 +65,18 @@ EOF;
     {
       $worker->addAbility($item);
 
-      $this->logSection('gearman-worker', 'New ability: '.$item);
+      $this->log('New ability: '.$item);
     }
 
     $worker->attachCallback(
       function($handle, $job, $e)
       {
-        $this->logSection('gearman-worker', "​Job failed: ".$e->getMessage());
+        $this->log('Job failed: '.$e->getMessage());
       },
       Net_Gearman_Worker::JOB_FAIL);
 
-    $this->logSection('gearman-worker', 'Running worker...');
-    $this->logSection('gearman-worker', 'PID '.getmypid());
+    $this->log('Running worker...');
+    $this->log('PID '.getmypid());
 
     $counter = 0;
     $storedLastJob = null;
@@ -104,7 +104,7 @@ EOF;
           }
           catch (Exception $e)
           {
-            $this->logSection('gearman-worker', 'Error updating the ES index:  '.$e->getMessage());
+            $this->log('Error updating the ES index:  '.$e->getMessage());
           }
 
           foreach (array(
@@ -154,6 +154,14 @@ EOF;
 
   public function gearmanWorkerLogger(sfEvent $event)
   {
-    $this->logSection('gearman-worker', $event['message']);
+    $this->log($event['message']);
+  }
+
+  /**
+   * @see sfTask
+   */
+  public function log($message)
+  {
+    parent::log(date('Y-m-d H:i:s > ').$message);
   }
 }
