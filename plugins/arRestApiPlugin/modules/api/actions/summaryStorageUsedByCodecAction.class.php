@@ -53,7 +53,7 @@ class ApiSummaryStorageUsedByCodecAction extends QubitApiAction
     // Add facet for each codec type
     foreach($codecTypes as $facetName => $mediaInfoPropName)
     {
-      $this->facetEsQuery('TermsStats', $facetName, 'digitalObjects.metsData.mediainfo.'. $mediaInfoPropName .'.codec', $query, array('valueField' => 'digitalObjects.digitalObject.byteSize'));
+      $this->facetEsQuery('TermsStats', $facetName, 'digitalObjects.metsData.mediainfo.'. $mediaInfoPropName .'.codec', $query, array('valueField' => 'digitalObjects.metsData.size'));
     }
 
     try
