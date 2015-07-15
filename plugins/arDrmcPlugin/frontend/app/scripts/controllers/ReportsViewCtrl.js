@@ -77,10 +77,10 @@
       } else if (angular.isDefined($stateParams.type)) {
 
         $scope.reportParams.type = $stateParams.type;
-        if ($stateParams.from !== null) {
+        if (angular.isDefined($stateParams.from)) {
           $scope.reportParams.from = new Date($stateParams.from).getTime();
         }
-        if ($stateParams.to !== null) {
+        if (angular.isDefined($stateParams.to)) {
           $scope.reportParams.to = new Date($stateParams.to).getTime();
         }
 
