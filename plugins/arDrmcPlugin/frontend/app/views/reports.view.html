@@ -61,10 +61,10 @@
             <h3>Date range</h3>
             <div ng-if="reportParams.from || reportParams.to">
               <div ng-if="reportParams.from">
-                From: {{ reportParams.from | date:'short' }}
+                From: {{ reportParams.from | date }}
               </div>
               <div ng-if="reportParams.to">
-                To: {{ reportParams.to | date:'short' }}
+                To: {{ reportParams.to | date }}
               </div>
             </div>
             <div ng-if="!reportParams.from && !reportParams.to">

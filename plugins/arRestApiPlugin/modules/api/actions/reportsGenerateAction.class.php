@@ -25,6 +25,9 @@ class ApiReportsGenerateAction extends QubitApiAction
     $this->queryBool = new \Elastica\Query\Bool;
     $this->queryBool->addMust(new \Elastica\Query\MatchAll);
 
+    // Set end date to last second of that day
+    $this->request->to += 86399000;
+
     // ES only gets 10 results if size is not set
     // Max int32 value may cause OutOfMemoryError
     $this->query->setSize(99999);
