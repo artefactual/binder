@@ -62,21 +62,21 @@ class ApiSummaryMediaFilesizeByYearAction extends QubitApiAction
 
     foreach($facets[$facetName]['terms'] as $index => $term)
     {
-      // take note of average
+      // Take note of average
       $average = $term['mean'];
       $facets[$facetName]['terms'][$index]['average'] = $average;
 
-      // convert millisecond timestamp to human-readable
+      // Convert millisecond timestamp to human-readable
       $facets[$facetName]['terms'][$index]['year'] = intval($term['term']);
 
-      // strip out extra data
+      // Strip out extra data
       foreach(array('count', 'total_count', 'min', 'max', 'mean', 'term', 'total') as $element)
       {
         unset($facets[$facetName]['terms'][$index][$element]);
       }
     }
 
-    // sort by year
+    // Sort by year
     function compare_year($a, $b)
     {
       return $a['year'] > $b['year'];
@@ -84,6 +84,43 @@ class ApiSummaryMediaFilesizeByYearAction extends QubitApiAction
 
     usort($facets[$facetName]['terms'], 'compare_year');
 
-    return $facets[$facetName]['terms'];
+    // Add missing years: ElasticSearch 0.9 facets
+    // don't include intervals without data, it can be solved
+    // using aggregations in Elasticsearch 1.x.
+    $results = array();
+    foreach($facets[$facetName]['terms'] as $result)
+    {
+      if (isset($previousResult))
+      {
+        // Add missing years in between
+        while ($previousResult['year'] + 1 < $result['year'])
+        {
+          $missingResult = array();
+          $missingResult['year'] = $previousResult['year'] + 1;
+          $missingResult['average'] = 0;
+
+          $results[] = $missingResult;
+          $previousResult = $missingResult;
+        }
+      }
+
+      $results[] = $result;
+      $previousResult = $result;
+    }
+
+    $currentYear = (integer)substr(date('Y-m-d'), 0, 4);
+
+    // Add missing years at the end
+    while ($currentYear - $previousResult['year'] > 0)
+    {
+      $missingResult = array();
+      $missingResult['year'] = $previousResult['year'] + 1;
+      $missingResult['average'] = 0;
+
+      $results[] = $missingResult;
+      $previousResult = $missingResult;
+    }
+
+    return $results;
   }
 }

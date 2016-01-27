@@ -49,8 +49,8 @@ class ApiSummaryArtworkByDateAction extends QubitApiAction
     $query->setLimit(0);
 
     // Add facets to the months in which artwork records were collected and created
-    $this->facetEsQuery('DateHistogram', 'collectionDate', 'tmsObject.dateCollected', $query, array('interval' => 'year'));
-    $this->facetEsQuery('DateHistogram', 'createdAt', 'createdAt', $query, array('interval' => 'month'));
+    $this->facetEsQuery('DateHistogram', 'collection', 'tmsObject.dateCollected', $query, array('interval' => 'year'));
+    $this->facetEsQuery('DateHistogram', 'creation', 'createdAt', $query, array('interval' => 'month'));
 
     // Return empty results if search fails
     try
@@ -67,35 +67,126 @@ class ApiSummaryArtworkByDateAction extends QubitApiAction
 
     $facets = $resultSet->getFacets();
 
-    // convert timestamps to month indicators and calculate running total
-    foreach($facets as $facetName => $facet)
+    // Convert timestamps and calculate running total.
+    // Add missing intervals: ElasticSearch 0.9 facets
+    // don't include intervals without data, it can be solved
+    // using aggregations in Elasticsearch 1.x.
+    $results = array();
+    foreach ($facets as $facetName => $facet)
     {
       $total = 0;
 
-      foreach($facets[$facetName]['entries'] as $index => $entry)
+      foreach ($facet['entries'] as $entry)
       {
-        // calculate running total
+        // Calculate running total
         $total += $entry['count'];
-        $facets[$facetName]['entries'][$index]['count'] = $entry['count'];
-        $facets[$facetName]['entries'][$index]['total'] = $total;
 
-        // convert millisecond timestamps to YYYY-MM format
+        // Create result from entry
+        $result = array();
+        $result['total'] = $total;
+        $result['count'] = $entry['count'];
+
+        // Convert millisecond timestamps to years and months
         $timestamp = $entry['time'] / 1000;
-        $facets[$facetName]['entries'][$index]['year'] = substr(date('Y-m-d', $timestamp), 0, 4);
+        $result['year'] = (integer)substr(date('Y-m-d', $timestamp), 0, 4);
 
-        if ($facetName == 'createdAt')
+        if ($facetName == 'creation')
         {
-          $timestamp = $entry['time'] / 1000;
-          $facets[$facetName]['entries'][$index]['month'] = substr(date('Y-m-d', $timestamp), 5, 2);
+          $result['month'] = (integer)substr(date('Y-m-d', $timestamp), 5, 2);
+
+          if (isset($previousResult))
+          {
+            // Add missing months in between to creation results
+            while (($result['year'] === $previousResult['year'] &&
+              $result['month'] - $previousResult['month'] > 1) ||
+              $result['year'] - $previousResult['year'] > 1 ||
+              ($result['year'] - $previousResult['year'] === 1 &&
+              $result['month'] - $previousResult['month'] !== -11))
+            {
+              $missingResult = array();
+              $missingResult['total'] = $previousResult['total'];
+              $missingResult['count'] = 0;
+
+              if ($previousResult['month'] == 12)
+              {
+                $missingResult['year'] = $previousResult['year'] + 1;
+                $missingResult['month'] = 1;
+              }
+              else
+              {
+                $missingResult['year'] = $previousResult['year'];
+                $missingResult['month'] = $previousResult['month'] + 1;
+              }
+
+              $results[$facetName][] = $missingResult;
+              $previousResult = $missingResult;
+            }
+          }
+        }
+        else if (isset($previousResult))
+        {
+          // Add missing years in between to collection results
+          while ($result['year'] - $previousResult['year'] > 1)
+          {
+            $missingResult = array();
+            $missingResult['total'] = $previousResult['total'];
+            $missingResult['count'] = 0;
+            $missingResult['year'] = $previousResult['year'] + 1;
+
+            $results[$facetName][] = $missingResult;
+            $previousResult = $missingResult;
+          }
         }
 
-        unset($facets[$facetName]['entries'][$index]['time']);
+        $results[$facetName][] = $result;
+        $previousResult = $result;
+      }
+
+      $currentYear = (integer)substr(date('Y-m-d'), 0, 4);
+
+      if ($facetName == 'creation')
+      {
+        $currentMonth = (integer)substr(date('Y-m-d'), 5, 2);
+
+        // Add missing months at the end to creation results
+        while ($currentYear !== $previousResult['year'] &&
+          $currentMonth !== $previousResult['month'])
+        {
+          $missingResult = array();
+          $missingResult['total'] = $previousResult['total'];
+          $missingResult['count'] = 0;
+
+          if ($previousResult['month'] == 12)
+          {
+            $missingResult['year'] = $previousResult['year'] + 1;
+            $missingResult['month'] = 1;
+          }
+          else
+          {
+            $missingResult['year'] = $previousResult['year'];
+            $missingResult['month'] = $previousResult['month'] + 1;
+          }
+
+          $results[$facetName][] = $missingResult;
+          $previousResult = $missingResult;
+        }
+      }
+      else
+      {
+        // Add missing years at the end to collection results
+        while ($currentYear - $previousResult['year'] > 0)
+        {
+          $missingResult = array();
+          $missingResult['total'] = $previousResult['total'];
+          $missingResult['count'] = 0;
+          $missingResult['year'] = $previousResult['year'] + 1;
+
+          $results[$facetName][] = $missingResult;
+          $previousResult = $missingResult;
+        }
       }
     }
 
-    return array(
-      'creation' => $facets['createdAt']['entries'],
-      'collection' => $facets['collectionDate']['entries']
-    );
+    return $results;
   }
 }
