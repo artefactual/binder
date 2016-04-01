@@ -18,6 +18,45 @@
   border-bottom: 1px solid #fff;
 }
 
+// Fix right and left padding in small widths
+
+@media (max-width: 767px) {
+  body {
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  header, .container {
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+}
+
+// Alerts
+
+.alerts-section {
+  padding-top: 0.1px; // Hack: Avoids blank space between header and #wrapper
+
+  .alert {
+    margin: 10px 10px 0 10px;
+
+    strong {
+      margin-right: 5px;
+    }
+  }
+}
+
+// Sticky section
+
+.sticky-section {
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: auto;
+  position: fixed;
+  z-index: 1;
+}
+
 // Imports all styles from #content
 // TODO: fix this!
 

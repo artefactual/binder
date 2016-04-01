@@ -1,9 +1,17 @@
 <ng-include src="headerPartialPath" ng-controller="HeaderCtrl"></ng-include>
 
-<div id="wrapper" class="container">
+<div id="wrapper">
 
-  <!-- View placeholder -->
-  <ui-view autoscroll="false"/>
+  <section class="alerts-section" ar-sticky-section>
+    <alert ng-repeat="alert in alerts" type="alert.type" close="alert.close()"><strong ng-if="alert.strongMessage">{{ alert.strongMessage }}</strong>{{ alert.message }}</alert>
+  </section>
+
+  <div class="container">
+
+    <!-- View placeholder -->
+    <ui-view autoscroll="false"/>
+
+  </div>
 
 </div>
 

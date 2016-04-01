@@ -2,7 +2,7 @@
 
   'use strict';
 
-  angular.module('drmc.services').service('ModalDownloadService', function ($modal, $window, SETTINGS) {
+  angular.module('drmc.services').service('ModalDownloadService', function ($modal, $window, SETTINGS, $http, AlertsService) {
 
     var configuration = {
       templateUrl: SETTINGS.viewsPath + '/modals/download-aip-or-aip-file.html',
@@ -35,11 +35,36 @@
 
     var open = function (aip, uuid, fileId) {
       return $modal.open(configuration).result.then(function (reason) {
-        var url = '/api/aips/' + uuid + '/download?reason=' + $window.encodeURIComponent(reason);
-        if (typeof fileId !== 'undefined') {
-          url += '&file_id=' + $window.encodeURIComponent(fileId);
+        var params = {
+          reason: reason
+        };
+        if (angular.isDefined(fileId)) {
+          params.file_id = fileId;
         }
-        $window.open(url, '_blank');
+        return $http({
+          method: 'GET',
+          url: SETTINGS.frontendPath + 'api/aips/' + uuid + '/downloadCheck',
+          params: params
+        }).then(function (response) {
+          if (response.data.available) {
+            var url = SETTINGS.frontendPath + 'api/aips/download' +
+              '?url=' + $window.encodeURIComponent(response.data.url) +
+              '&filename=' + $window.encodeURIComponent(response.data.filename) +
+              '&filesize=' + $window.encodeURIComponent(response.data.filesize);
+            $window.open(url, '_self');
+          } else {
+            var downloadType = 'AIP';
+            if (angular.isDefined(fileId)) {
+              downloadType = 'file';
+            }
+            var alertOptions = {
+              type: 'error',
+              message: response.data.reason,
+              strongMessage: 'Could not download ' + downloadType + '!'
+            };
+            AlertsService.addAlert(alertOptions);
+          }
+        });
       });
     };
 

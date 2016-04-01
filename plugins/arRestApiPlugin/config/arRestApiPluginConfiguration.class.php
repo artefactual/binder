@@ -64,10 +64,14 @@ class arRestApiPluginConfiguration extends sfPluginConfiguration
       'action' => 'aipsFiles',
       'params' => array('id' => self::REGEX_UUID)));
 
-    $this->addRoute('GET', '/api/aips/:uuid/download', array(
+    $this->addRoute('GET', '/api/aips/:uuid/downloadCheck', array(
       'module' => 'api',
-      'action' => 'aipsDownloadView',
+      'action' => 'aipsDownloadCheck',
       'params' => array('uuid' => self::REGEX_UUID)));
+
+    $this->addRoute('GET', '/api/aips/download', array(
+      'module' => 'api',
+      'action' => 'aipsDownload'));
 
     $this->addRoute('POST', '/api/aips/:uuid/reclassify', array(
       'module' => 'api',
