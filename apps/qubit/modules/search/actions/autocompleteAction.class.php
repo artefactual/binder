@@ -77,7 +77,7 @@ class SearchAutocompleteAction extends sfAction
         ->addIndex($index)
         ->addType($index->getType($item['type']));
 
-      $query = new \Elastica\Query();
+      $query = new \Elastica\Query;
       $query
         ->setSize(3)
         ->setFields($item['fields'])
@@ -89,10 +89,10 @@ class SearchAutocompleteAction extends sfAction
                   'number_of_fragments' => 0, // Request the entire field
               ))));
 
-      $queryBool = new \Elastica\Query\Bool;
+      $queryBool = new \Elastica\Query\BoolQuery;
 
       // Match in autocomplete
-      $queryText = new \Elastica\Query\Match();
+      $queryText = new \Elastica\Query\Match;
       $queryText->setFieldQuery($item['field'].'.autocomplete', $this->queryString);
       $queryBool->addMust($queryText);
 
@@ -104,6 +104,8 @@ class SearchAutocompleteAction extends sfAction
 
       if (isset($request->repos) && ctype_digit($request->repos) && 'QubitInformationObject' == $item['type'])
       {
+        $queryBool = new \Elastica\Query\BoolQuery;
+        $queryBool->addMust($queryText);
         $queryBool->addMust(new \Elastica\Query\Term(array('repository.id' => $request->repos)));
 
         // Store realm in user session
@@ -116,7 +118,7 @@ class SearchAutocompleteAction extends sfAction
       if ('QubitInformationObject' == $item['type'])
       {
         // Filter
-        $filter = new \Elastica\Filter\Bool;
+        $filter = new \Elastica\Filter\BoolFilter;
 
         // Filter drafts
         QubitAclSearch::filterDrafts($filter);
@@ -124,7 +126,7 @@ class SearchAutocompleteAction extends sfAction
         // Set filter when needed
         if (0 < count($filter->toArray()))
         {
-          $query->setFilter($filter);
+          $query->setPostFilter($filter);
         }
       }
 

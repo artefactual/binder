@@ -271,7 +271,7 @@ EOF;
         // Set filter
         if (0 < count($this->filterBool->toArray()))
         {
-          $this->query->setFilter($this->filterBool);
+          $this->query->setPostFilter($this->filterBool);
         }
 
         $resultSet = QubitSearch::getInstance()->index->getType('QubitInformationObject')->search($this->query);
@@ -297,7 +297,7 @@ EOF;
       $request->listLimit = sfConfig::get('app_hits_per_page');
     }
 
-    $listQuery = new \Elastica\Query();
+    $listQuery = new \Elastica\Query;
     $listQuery->setLimit($request->listLimit);
     $listQuery->setSort(array(sprintf('i18n.%s.name.untouched', $this->culture) => 'asc'));
 
@@ -306,7 +306,7 @@ EOF;
       $listQuery->setFrom(($request->listPage - 1) * $request->listLimit);
     }
 
-    $listQueryBool = new \Elastica\Query\Bool();
+    $listQueryBool = new \Elastica\Query\BoolQuery;
     $listQueryBool->addMust(new \Elastica\Query\Term(array('taxonomyId' => $this->resource->taxonomyId)));
 
     $listQuery->setQuery($listQueryBool);

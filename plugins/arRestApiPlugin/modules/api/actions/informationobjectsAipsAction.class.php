@@ -42,7 +42,7 @@ class ApiInformationObjectsAipsAction extends QubitApiAction
   {
     // Create query objects
     $query = new \Elastica\Query;
-    $queryBool = new \Elastica\Query\Bool;
+    $queryBool = new \Elastica\Query\BoolQuery;
     $queryBool->addMust(new \Elastica\Query\Term(array('partOf.id' => $this->request->id)));
 
     // Add facets to the query

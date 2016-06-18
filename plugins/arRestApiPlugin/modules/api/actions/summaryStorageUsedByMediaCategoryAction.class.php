@@ -32,7 +32,7 @@ class ApiSummaryStorageUsedByMediaCategoryAction extends QubitApiAction
   {
     // Create query objects
     $query = new \Elastica\Query;
-    $queryBool = new \Elastica\Query\Bool;
+    $queryBool = new \Elastica\Query\BoolQuery;
 
     // Get all information objects
     $queryBool->addMust(new \Elastica\Query\MatchAll);

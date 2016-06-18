@@ -32,7 +32,7 @@ class ApiSummaryArtworkByDateAction extends QubitApiAction
   {
     // Create query objects
     $query = new \Elastica\Query;
-    $queryBool = new \Elastica\Query\Bool;
+    $queryBool = new \Elastica\Query\BoolQuery;
 
     // Get all artwork records
     $queryMatch = new \Elastica\Query\Match;

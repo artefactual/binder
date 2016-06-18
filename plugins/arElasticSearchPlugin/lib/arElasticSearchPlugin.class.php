@@ -105,26 +105,47 @@ class arElasticSearchPlugin extends QubitSearchEngine
       return;
     }
 
-    // If there are still documents in the batch queue, send them
-    if ($this->config['batch_mode'] && count($this->batchDocs) > 0)
+    $this->flushBatch();
+    $this->index->refresh();
+  }
+
+  /**
+   * Obtain the version of the Elasticsearch server
+   */
+  private function getVersion()
+  {
+    $data = $this->client->request('/')->getData();
+    if (null === $version = @$data['version']['number'])
     {
-      try
-      {
-        $this->index->addDocuments($this->batchDocs);
-        $this->index->flush();
-      }
-      catch (Exception $e)
-      {
-        // Clear batchDocs if something went wrong too
-        $this->batchDocs = array();
-
-        throw $e;
-      }
-
-      $this->batchDocs = array();
+      throw new \Elastica\Exception\ResponseException('Unexpected response');
     }
 
-    $this->index->refresh();
+    return $version;
+  }
+
+  /**
+   * Check if the server version is recent enough and cache it if so to avoid
+   * hitting Elasticsearch again for each request
+   */
+  private function checkVersion()
+  {
+    // Avoid the check if the cache entry is still available
+    if ($this->cache->has('elasticsearch_version_ok'))
+    {
+      return;
+    }
+
+    // This is slow as it hits the server
+    $version = $this->getVersion();
+    if (!version_compare($version, self::MIN_VERSION, '>='))
+    {
+      $message = sprintf('The version of Elasticsearch that you are running is out of date (%s), and no longer compatible with this version of AtoM. Please upgrade to version %s or newer.', $version, self::MIN_VERSION);
+      throw new \Elastica\Exception\ClientException($message);
+    }
+
+    // We know at this point that the server meets the requirements. We cache it
+    // for an hour.
+    $this->cache->set('elasticsearch_version_ok', 1, 3600);
   }
 
   /**
@@ -255,6 +276,30 @@ class arElasticSearchPlugin extends QubitSearchEngine
     $this->initialize();
   }
 
+  /*
+   * Flush batch of documents if we're in batch mode.
+   */
+  public function flushBatch()
+  {
+    // If there are still documents in the batch queue, send them
+    if ($this->config['batch_mode'] && count($this->batchDocs) > 0)
+    {
+      try
+      {
+        $this->index->addDocuments($this->batchDocs);
+      }
+      catch (Exception $e)
+      {
+        // Clear batchDocs if something went wrong too
+        $this->batchDocs = array();
+
+        throw $e;
+      }
+
+      $this->batchDocs = array();
+    }
+  }
+
   /**
    * Populate index
    */
@@ -329,16 +374,13 @@ class arElasticSearchPlugin extends QubitSearchEngine
       if (count($this->batchDocs) >= $this->batchSize)
       {
         $this->index->addDocuments($this->batchDocs);
-
-        $this->index->flush();
-
         $this->batchDocs = array();
+        $this->index->refresh();
       }
     }
     else
     {
       $this->index->getType($type)->addDocument($document);
-      $this->index->flush();
     }
   }
 

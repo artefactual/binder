@@ -36,8 +36,8 @@ class ApiAipsBrowseAction extends QubitApiAction
   {
     // Create query objects
     $query = new \Elastica\Query;
-    $queryBool = new \Elastica\Query\Bool;
-    $filterBool = new \Elastica\Filter\Bool;
+    $queryBool = new \Elastica\Query\BoolQuery;
+    $filterBool = new \Elastica\Filter\BoolFilter;
     $queryBool->addMust(new \Elastica\Query\MatchAll);
 
     // Pagination and sorting
@@ -127,7 +127,7 @@ class ApiAipsBrowseAction extends QubitApiAction
     // Set filter
     if (0 < count($filterBool->toArray()))
     {
-      $query->setFilter($filterBool);
+      $query->setPostFilter($filterBool);
     }
 
     $resultSet = QubitSearch::getInstance()->index->getType('QubitAip')->search($query);
@@ -178,7 +178,7 @@ class ApiAipsBrowseAction extends QubitApiAction
   {
     // Create query objects
     $query = new \Elastica\Query;
-    $queryBool = new \Elastica\Query\Bool;
+    $queryBool = new \Elastica\Query\BoolQuery;
     $queryBool->addMust(new \Elastica\Query\MatchAll);
 
     // Add facets to the query

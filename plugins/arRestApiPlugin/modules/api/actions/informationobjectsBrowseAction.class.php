@@ -65,7 +65,7 @@ class ApiInformationObjectsBrowseAction extends QubitApiAction
     }
 
     // Limit fields
-    $query->setFields(array(
+    $query->setSource(array(
       'slug',
       'identifier',
       'inheritReferenceCode',

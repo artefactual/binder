@@ -28,9 +28,9 @@ class ApiFixityStatusAction extends QubitApiAction
   {
     // Last reports
     $query = new \Elastica\Query;
-    $queryBool = new \Elastica\Query\Bool;
+    $queryBool = new \Elastica\Query\BoolQuery;
 
-    $queryAll = new \Elastica\Query\MatchAll();
+    $queryAll = new \Elastica\Query\MatchAll;
     $filter = new \Elastica\Filter\Exists('timeCompleted');
     $filteredQuery = new \Elastica\Query\Filtered($queryAll, $filter);
 
@@ -72,7 +72,7 @@ class ApiFixityStatusAction extends QubitApiAction
 
     // Last reports failed
     $query = new \Elastica\Query;
-    $queryBool = new \Elastica\Query\Bool;
+    $queryBool = new \Elastica\Query\BoolQuery;
 
     $queryBool->addMust(new \Elastica\Query\Term(array('success' => false)));
 
@@ -171,7 +171,7 @@ class ApiFixityStatusAction extends QubitApiAction
 
     // Checks in 24 hours
     $query = new \Elastica\Query;
-    $queryBool = new \Elastica\Query\Bool;
+    $queryBool = new \Elastica\Query\BoolQuery;
 
     $now = new DateTime();
 

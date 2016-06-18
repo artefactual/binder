@@ -36,8 +36,8 @@ class ApiReportsBrowseAction extends QubitApiAction
   {
     // Create query objects
     $query = new \Elastica\Query;
-    $filterBool = new \Elastica\Filter\Bool;
-    $queryBool = new \Elastica\Query\Bool;
+    $queryBool = new \Elastica\Query\BoolQuery;
+    $filterBool = new \Elastica\Filter\BoolFilter;
     $queryBool->addMust(new \Elastica\Query\Term(array('typeId' => sfConfig::get('app_drmc_term_report_id'))));
 
     // Pagination and sorting
@@ -109,7 +109,7 @@ class ApiReportsBrowseAction extends QubitApiAction
     // Set filter
     if (0 < count($filterBool->toArray()))
     {
-      $query->setFilter($filterBool);
+      $query->setPostFilter($filterBool);
     }
 
     // Assign query
@@ -152,7 +152,7 @@ class ApiReportsBrowseAction extends QubitApiAction
   protected function getOverview()
   {
     $query = new \Elastica\Query;
-    $queryBool = new \Elastica\Query\Bool;
+    $queryBool = new \Elastica\Query\BoolQuery;
     $queryBool->addMust(new \Elastica\Query\Term(array('typeId' => sfConfig::get('app_drmc_term_report_id'))));
 
     $this->facetEsQuery('Terms', 'type', 'scope', $query);

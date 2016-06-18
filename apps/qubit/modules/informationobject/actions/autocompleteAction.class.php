@@ -36,16 +36,16 @@ class InformationObjectAutocompleteAction extends sfAction
 
     $culture = $this->context->user->getCulture();
 
-    $this->query = new \Elastica\Query();
+    $this->query = new \Elastica\Query;
     $this->query->setLimit($request->limit);
     $this->query->setSort(array('levelOfDescriptionId' => 'asc', 'identifier' => 'asc', 'i18n.'.$culture.'.title' => 'asc'));
 
-    $this->queryBool = new \Elastica\Query\Bool();
-    $this->filterBool = new \Elastica\Filter\Bool;
+    $this->queryBool = new \Elastica\Query\BoolQuery;
+    $this->filterBool = new \Elastica\Filter\BoolFilter;
 
     if (1 === preg_match('/^[\s\t\r\n]*$/', $request->query))
     {
-      $this->queryBool->addMust(new \Elastica\Query\MatchAll());
+      $this->queryBool->addMust(new \Elastica\Query\MatchAll);
     }
     else
     {
@@ -88,7 +88,7 @@ class InformationObjectAutocompleteAction extends sfAction
     // Set filter
     if (0 < count($this->filterBool->toArray()))
     {
-      $this->query->setFilter($this->filterBool);
+      $this->query->setPostFilter($this->filterBool);
     }
 
     $resultSet = QubitSearch::getInstance()->index->getType('QubitInformationObject')->search($this->query);

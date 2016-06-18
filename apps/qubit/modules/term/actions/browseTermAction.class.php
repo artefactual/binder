@@ -91,7 +91,7 @@ class TermBrowseTermAction extends DefaultBrowseAction
 
       default:
         // pass
-        $queryFilter = new \Elastica\Query\MatchAll();
+        $queryFilter = new \Elastica\Query\MatchAll;
 
         break;
     }
@@ -104,7 +104,7 @@ class TermBrowseTermAction extends DefaultBrowseAction
     // Set filter
     if (0 < count($this->filterBool->toArray()))
     {
-      $this->query->setFilter($this->filterBool);
+      $this->query->setPostFilter($this->filterBool);
     }
 
     $resultSet = QubitSearch::getInstance()->index->getType('QubitInformationObject')->search($this->query);

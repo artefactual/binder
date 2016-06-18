@@ -23,7 +23,7 @@ class QubitApiAip
   {
     // Create query objects
     $query = new \Elastica\Query;
-    $queryBool = new \Elastica\Query\Bool;
+    $queryBool = new \Elastica\Query\BoolQuery;
 
     // Query
     $queryTerm = new \Elastica\Query\Term;

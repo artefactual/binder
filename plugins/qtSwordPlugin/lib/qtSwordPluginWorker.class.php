@@ -33,11 +33,6 @@ class qtSwordPluginWorker extends Net_Gearman_Job_Common
 
     $this->log('A new job has started to being processed.');
 
-    if (!is_writable(sfConfig::get('sf_web_dir').DIRECTORY_SEPARATOR.sfConfig::get('app_upload_dir')))
-    {
-      throw new Net_Gearman_Job_Exception('Read-write access needed in {sf_web_dir}/{app_upload_dir}!');
-    }
-
     if (isset($package['location']))
     {
       $this->log(sprintf('A package was deposited by reference.'));
@@ -63,6 +58,8 @@ class qtSwordPluginWorker extends Net_Gearman_Job_Common
     {
       $this->log(sprintf('Exception: %s', $e->getMessage()));
     }
+
+    QubitSearch::getInstance()->flushBatch();
 
     $this->log(sprintf('Job finished.'));
 

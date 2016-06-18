@@ -22,7 +22,7 @@ class ApiReportsGenerateAction extends QubitApiAction
   protected function get($request)
   {
     $this->query = new \Elastica\Query;
-    $this->queryBool = new \Elastica\Query\Bool;
+    $this->queryBool = new \Elastica\Query\BoolQuery;
     $this->queryBool->addMust(new \Elastica\Query\MatchAll);
 
     // Set end date to last second of that day
@@ -185,7 +185,7 @@ class ApiReportsGenerateAction extends QubitApiAction
 
     // New tech records
     $this->query = new \Elastica\Query;
-    $this->queryBool = new \Elastica\Query\Bool;
+    $this->queryBool = new \Elastica\Query\BoolQuery;
     $this->queryBool->addMust(new \Elastica\Query\MatchAll);
 
     $this->queryBool->addMust(new \Elastica\Query\Term(array('levelOfDescriptionId' => sfConfig::get('app_drmc_lod_supporting_technology_record_id'))));
@@ -198,7 +198,7 @@ class ApiReportsGenerateAction extends QubitApiAction
 
     // AIPs ingested
     $this->query = new \Elastica\Query;
-    $this->queryBool = new \Elastica\Query\Bool;
+    $this->queryBool = new \Elastica\Query\BoolQuery;
     $this->queryBool->addMust(new \Elastica\Query\MatchAll);
     $this->query->setSize(99999);
 
@@ -887,7 +887,7 @@ sql;
           // Get last fixity check for the AIP
           // TODO? Add fixity data to components in ES and update component when fixity checks are added
           $fixityQuery = new \Elastica\Query;
-          $fixityQueryBool = new \Elastica\Query\Bool;
+          $fixityQueryBool = new \Elastica\Query\BoolQuery;
           $fixityQueryBool->addMust(new \Elastica\Query\Term(array('aip.uuid' => $aip['uuid'])));
 
           $fixityQuery->setQuery($fixityQueryBool);
@@ -1067,7 +1067,7 @@ sql;
       if (isset($doc['aipUuid']))
       {
         $fixityQuery = new \Elastica\Query;
-        $fixityQueryBool = new \Elastica\Query\Bool;
+        $fixityQueryBool = new \Elastica\Query\BoolQuery;
         $fixityQueryBool->addMust(new \Elastica\Query\Term(array('aip.uuid' => $doc['aipUuid'])));
 
         $fixityQuery->setQuery($fixityQueryBool);

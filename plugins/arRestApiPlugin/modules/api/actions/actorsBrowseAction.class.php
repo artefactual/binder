@@ -35,7 +35,7 @@ class ApiActorsBrowseAction extends QubitApiAction
   {
     // Create query objects
     $query = new \Elastica\Query;
-    $queryBool = new \Elastica\Query\Bool;
+    $queryBool = new \Elastica\Query\BoolQuery;
     $queryBool->addMust(new \Elastica\Query\MatchAll);
 
     // Pagination and sorting

@@ -62,7 +62,7 @@ class DefaultBrowseAction extends sfAction
         $facet->setSize($item['size']);
       }
 
-      $filter = new \Elastica\Filter\Bool;
+      $filter = new \Elastica\Filter\BoolFilter;
 
       // Sets a filter for this facet
       if (isset($item['filter']))
@@ -258,7 +258,7 @@ class DefaultBrowseAction extends sfAction
       $request->sort = $this->sortSetting;
     }
 
-    $this->query = new \Elastica\Query();
+    $this->query = new \Elastica\Query;
     $this->query->setLimit($request->limit);
 
     if (!empty($request->page))
@@ -266,8 +266,8 @@ class DefaultBrowseAction extends sfAction
       $this->query->setFrom(($request->page - 1) * $request->limit);
     }
 
-    $this->queryBool = new \Elastica\Query\Bool();
-    $this->filterBool = new \Elastica\Filter\Bool;
+    $this->queryBool = new \Elastica\Query\BoolQuery;
+    $this->filterBool = new \Elastica\Filter\BoolFilter;
 
     if (isset($this::$FACETS))
     {

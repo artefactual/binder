@@ -33,8 +33,8 @@ class ApiInformationObjectsTechnologyRecordsBrowseAction extends QubitApiAction
   {
     // Create query objects
     $query = new \Elastica\Query;
-    $filterBool = new \Elastica\Filter\Bool;
-    $queryBool = new \Elastica\Query\Bool;
+    $queryBool = new \Elastica\Query\BoolQuery;
+    $filterBool = new \Elastica\Filter\BoolFilter;
 
     // Pagination and sorting
     $this->prepareEsPagination($query);
@@ -111,25 +111,19 @@ class ApiInformationObjectsTechnologyRecordsBrowseAction extends QubitApiAction
 
     $this->facetEsQuery('Range', 'dateIngested', 'aips.createdAt', $query, array('ranges' => $dateRanges));
 
-    // Range facet with script to facet total size
     $sizeRanges = array(
-      array('to' => 512000),
-      array('from' => 512000, 'to' => 1048576),
-      array('from' => 1048576, 'to' => 2097152),
-      array('from' => 2097152, 'to' => 5242880),
-      array('from' => 5242880, 'to' => 10485760),
-      array('from' => 10485760));
+      array('from' => null, 'to' => 512000, 'key' => 'Smaller than 500 KB'),
+      array('from' => 512000, 'to' => 1048576, 'key' => 'Between 500 KB and 1 MB'),
+      array('from' => 1048576, 'to' => 2097152, 'key' => 'Between 1 MB and 2 MB'),
+      array('from' => 2097152, 'to' => 5242880, 'key' => 'Between 2 MB and 5 MB'),
+      array('from' => 5242880, 'to' => 10485760, 'key' => 'Between 5 MB and 10 MB'),
+      array('from' => 10485760, 'to' => null, 'key' => 'Bigger than 10 MB'));
 
-    $scriptStr = 'sum=0; foreach( size : doc[\'aips.sizeOnDisk\'].values) { sum = sum + size }; return sum;';
-
-    $rangeFacet = new \Elastica\Facet\Range('totalSize');
-    $rangeFacet->setKeyValueScripts($scriptStr, $scriptStr);
-    $rangeFacet->setRanges($sizeRanges);
-
-    $query->addFacet($rangeFacet);
+    // Range aggregation with script file for AIPs total size
+    $this->addAggrToEsQuery('Range', 'totalSize', null, $query, array('ranges' => $sizeRanges, 'scriptFile' => 'binder_aips_total_size_aggr'));
 
     // Limit fields
-    $query->setFields(array(
+    $query->setSource(array(
       'slug',
       'identifier',
       'inheritedTitle',
@@ -153,24 +147,19 @@ class ApiInformationObjectsTechnologyRecordsBrowseAction extends QubitApiAction
     if ((isset($this->request->totalSizeFrom) && ctype_digit($this->request->totalSizeFrom))
       || (isset($this->request->totalSizeTo) && ctype_digit($this->request->totalSizeTo)))
     {
-      $scriptStr = 'sum=0; foreach( size : doc[\'aips.sizeOnDisk\'].values) { sum = sum + size }; ';
+      $script = new \Elastica\Script('binder_aips_total_size_filter');
 
-      if (isset($this->request->totalSizeFrom) && isset($this->request->totalSizeTo))
+      if (isset($this->request->totalSizeFrom))
       {
-        $scriptStr .= $this->request->totalSizeFrom.' < sum && sum < '.$this->request->totalSizeTo.';';
-      }
-      else if (isset($this->request->totalSizeFrom) && ctype_digit($this->request->totalSizeFrom))
-      {
-        $scriptStr .= $this->request->totalSizeFrom.' < sum;';
-      }
-      else if (isset($this->request->totalSizeTo) && ctype_digit($this->request->totalSizeTo))
-      {
-        $scriptStr .= 'sum < '.$this->request->totalSizeTo.';';
+        $script->setParam('from', (double)$this->request->totalSizeFrom);
       }
 
-      $script = new \Elastica\Script($scriptStr);
-      $scriptFilter = new \Elastica\Filter\Script($scriptStr);
-      $filteredQuery = new \Elastica\Query\Filtered($queryBool, $scriptFilter);
+      if (isset($this->request->totalSizeTo))
+      {
+        $script->setParam('to', (double)$this->request->totalSizeTo);
+      }
+
+      $scriptFilter = new \Elastica\Filter\Script($script);
 
       $query->setQuery($filteredQuery);
     }
@@ -182,7 +171,7 @@ class ApiInformationObjectsTechnologyRecordsBrowseAction extends QubitApiAction
     // Set filter
     if (0 < count($filterBool->toArray()))
     {
-      $query->setFilter($filterBool);
+      $query->setPostFilter($filterBool);
     }
 
     $resultSet = QubitSearch::getInstance()->index->getType('QubitInformationObject')->search($query);
@@ -209,7 +198,8 @@ class ApiInformationObjectsTechnologyRecordsBrowseAction extends QubitApiAction
     }
 
     $facets = $resultSet->getFacets();
-    $this->populateFacets($facets);
+    $aggregations = $resultSet->getAggregations();
+    $this->populateFacets($facets, $aggregations);
 
     return
       array(

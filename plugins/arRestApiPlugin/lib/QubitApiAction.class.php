@@ -112,7 +112,7 @@ class QubitAPIAction extends sfAction
    * \Elastica\Query because the former happens after faceting while the
    * latter happens before faceting.
    */
-  protected function filterEsFacetFilter($name, $field, \Elastica\Filter\Bool &$filterBool, $operator = 'AND', array $options = array())
+  protected function filterEsFacetFilter($name, $field, \Elastica\Filter\BoolFilter &$filterBool, $operator = 'AND', array $options = array())
   {
     if (!isset($this->request->$name))
     {
@@ -164,7 +164,7 @@ class QubitAPIAction extends sfAction
    * \Elastica\Filter because the later happens after faceting while the
    * former happens before faceting.
    */
-  protected function filterEsFacetQuery($name, $field, \Elastica\Query\Bool &$queryBool, $operator = 'AND', array $options = array())
+  protected function filterEsFacetQuery($name, $field, \Elastica\Query\BoolQuery &$queryBool, $operator = 'AND', array $options = array())
   {
     if (!isset($this->request->$name))
     {
@@ -211,7 +211,7 @@ class QubitAPIAction extends sfAction
     }
   }
 
-  protected function filterEsRangeFacet($from, $to, $field, \Elastica\Query\Bool &$queryBool, array $options = array())
+  protected function filterEsRangeFacet($from, $to, $field, \Elastica\Query\BoolQuery &$queryBool, array $options = array())
   {
     if (!isset($this->request->$from) && !isset($this->request->$to))
     {
@@ -333,7 +333,36 @@ class QubitAPIAction extends sfAction
     $query->addFacet($facet);
   }
 
-  protected function populateFacets(&$facets)
+  protected function addAggrToEsQuery($aggrType, $name, $field, \Elastica\Query &$query, array $options = array())
+  {
+    $className = '\\Elastica\\Aggregation\\'.$aggrType;
+    $aggr = new $className($name);
+
+    if (isset($field))
+    {
+      $aggr->setField($field);
+    }
+    else if (isset($options['scriptFile']))
+    {
+      $scriptFile = new \Elastica\ScriptFile($options['scriptFile']);
+      $aggr->setScript($scriptFile);
+    }
+
+    switch ($aggrType)
+    {
+      case 'Range':
+        foreach ($options['ranges'] as $range)
+        {
+          $aggr->addRange($range['from'], $range['to'], $range['key']);
+        }
+
+        break;
+    }
+
+    $query->addAggregation($aggr);
+  }
+
+  protected function populateFacets(&$facets, $aggregations = array())
   {
     foreach ($facets as $name => &$facet)
     {
@@ -357,6 +386,30 @@ class QubitAPIAction extends sfAction
             $item['label'] = $label;
           }
         }
+      }
+    }
+
+    // Temporary transform aggregations to facet format to avoid changes
+    // in the frontend until aggregations are fully implemented
+    foreach ($aggregations as $name => $aggregation)
+    {
+      if (!isset($aggregation['buckets']) || 0 == count($aggregation['buckets']))
+      {
+        continue;
+      }
+
+      // At the moment we only have range aggregations
+      $facets[$name] = array('ranges' => array());
+
+      foreach ($aggregation['buckets'] as $bucket)
+      {
+        if (isset($bucket['doc_count']))
+        {
+          $bucket['count'] = $bucket['doc_count'];
+          unset($bucket['doc_count']);
+        }
+
+        $facets[$name]['ranges'][] = $bucket;
       }
     }
   }

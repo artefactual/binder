@@ -83,7 +83,7 @@ class TaxonomyIndexAction extends sfAction
 
     $culture = $this->context->user->getCulture();
 
-    $this->query = new \Elastica\Query();
+    $this->query = new \Elastica\Query;
     $this->query->setLimit($request->limit);
 
     if (!empty($request->page))
@@ -91,8 +91,8 @@ class TaxonomyIndexAction extends sfAction
       $this->query->setFrom(($request->page - 1) * $request->limit);
     }
 
-    $this->queryBool = new \Elastica\Query\Bool();
-    $this->filterBool = new \Elastica\Filter\Bool;
+    $this->queryBool = new \Elastica\Query\BoolQuery;
+    $this->filterBool = new \Elastica\Filter\BoolFilter;
 
     $query = new \Elastica\Query\Term;
     $query->setTerm('taxonomyId', $this->resource->id);
@@ -152,7 +152,7 @@ class TaxonomyIndexAction extends sfAction
     // Set filter
     if (0 < count($this->filterBool->toArray()))
     {
-      $this->query->setFilter($this->filterBool);
+      $this->query->setPostFilter($this->filterBool);
     }
 
     $resultSet = QubitSearch::getInstance()->index->getType('QubitTerm')->search($this->query);

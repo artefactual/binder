@@ -35,7 +35,7 @@ class ApiReportsReadAction extends QubitApiAction
     else
     {
       $query = new \Elastica\Query;
-      $queryBool = new \Elastica\Query\Bool;
+      $queryBool = new \Elastica\Query\BoolQuery;
 
       $queryText = new \Elastica\Query\QueryString($request->input);
       $queryText->setFields(array('slug'));

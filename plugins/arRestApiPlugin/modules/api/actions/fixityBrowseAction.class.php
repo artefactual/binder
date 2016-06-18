@@ -28,7 +28,7 @@ class ApiFixityBrowseAction extends QubitApiAction
   {
     // Create query objects
     $query = new \Elastica\Query;
-    $queryBool = new \Elastica\Query\Bool;
+    $queryBool = new \Elastica\Query\BoolQuery;
 
     if (isset($this->request->uuid))
     {

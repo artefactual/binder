@@ -74,10 +74,10 @@ class ApiSearchAutocompleteAction extends QubitApiAction
         ->addIndex($index)
         ->addType($index->getType($item['type']));
 
-      $query = new \Elastica\Query();
+      $query = new \Elastica\Query;
       $query
         ->setSize(3)
-        ->setFields($item['fields'])
+        ->setSource($item['fields'])
         ->setHighlight(array(
             'require_field_match' => true, // Restrict highlighting to matched fields
             'fields' => array(
@@ -97,7 +97,7 @@ class ApiSearchAutocompleteAction extends QubitApiAction
           break;
 
         case 'work':
-          $queryBool = new \Elastica\Query\Bool;
+          $queryBool = new \Elastica\Query\BoolQuery;
           $queryBool->addMust($queryText);
 
           // Filter to Artwork Records
@@ -108,7 +108,7 @@ class ApiSearchAutocompleteAction extends QubitApiAction
           break;
 
         case 'component':
-          $queryBool = new \Elastica\Query\Bool;
+          $queryBool = new \Elastica\Query\BoolQuery;
           $queryBool->addMust($queryText);
 
           // Filter to Components
@@ -128,7 +128,7 @@ class ApiSearchAutocompleteAction extends QubitApiAction
           break;
 
         case 'technology-record':
-          $queryBool = new \Elastica\Query\Bool;
+          $queryBool = new \Elastica\Query\BoolQuery;
           $queryBool->addMust($queryText);
 
           // Filter to Technology Records
@@ -139,7 +139,7 @@ class ApiSearchAutocompleteAction extends QubitApiAction
           break;
 
         case 'file':
-          $queryBool = new \Elastica\Query\Bool;
+          $queryBool = new \Elastica\Query\BoolQuery;
           $queryBool->addMust($queryText);
 
           // Filter to Digital Objects

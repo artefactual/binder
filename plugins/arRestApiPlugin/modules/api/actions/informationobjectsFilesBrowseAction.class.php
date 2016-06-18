@@ -33,8 +33,8 @@ class ApiInformationObjectsFilesBrowseAction extends QubitApiAction
   {
     // Create query objects
     $query = new \Elastica\Query;
-    $filterBool = new \Elastica\Filter\Bool;
-    $queryBool = new \Elastica\Query\Bool;
+    $queryBool = new \Elastica\Query\BoolQuery;
+    $filterBool = new \Elastica\Filter\BoolFilter;
 
     // Pagination and sorting
     $this->prepareEsPagination($query);
@@ -112,7 +112,7 @@ class ApiInformationObjectsFilesBrowseAction extends QubitApiAction
     $this->facetEsQuery('Range', 'dateIngested', 'metsData.dateIngested', $query, array('ranges' => $dateRanges));
 
     // Limit fields
-    $query->setFields(array(
+    $query->setSource(array(
       'slug',
       'identifier',
       'inheritReferenceCode',
@@ -136,7 +136,7 @@ class ApiInformationObjectsFilesBrowseAction extends QubitApiAction
     // Set filter
     if (0 < count($filterBool->toArray()))
     {
-      $query->setFilter($filterBool);
+      $query->setPostFilter($filterBool);
     }
 
     // Assign query

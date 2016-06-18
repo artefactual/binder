@@ -28,7 +28,7 @@ class ApiInformationObjectsMetsAction extends QubitApiAction
   {
     $query = new \Elastica\Query;
     $query->setQuery(new \Elastica\Query\Term(array('_id' => $this->request->id)));
-    $query->setFields(array('metsData'));
+    $query->setSource(array('metsData'));
 
     $results = QubitSearch::getInstance()->index->getType('QubitInformationObject')->search($query);
 

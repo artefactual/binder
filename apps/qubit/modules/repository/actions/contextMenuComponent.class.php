@@ -32,8 +32,8 @@ class RepositoryContextMenuComponent extends sfComponent
 
     $this->resource = $request->getAttribute('sf_route')->resource;
 
-    $queryBool = new \Elastica\Query\Bool();
-    $queryBool->addShould(new \Elastica\Query\MatchAll());
+    $queryBool = new \Elastica\Query\BoolQuery;
+    $queryBool->addShould(new \Elastica\Query\MatchAll);
     $queryBool->addMust(new \Elastica\Query\Term(array('parentId' => QubitInformationObject::ROOT_ID)));
     $queryBool->addMust(new \Elastica\Query\Term(array('repository.id' => $this->resource->id)));
 
@@ -46,7 +46,7 @@ class RepositoryContextMenuComponent extends sfComponent
             'ignore_unmapped' => true)));
 
     // Filter
-    $filter = new \Elastica\Filter\Bool;
+    $filter = new \Elastica\Filter\BoolFilter;
 
     // Filter drafts
     QubitAclSearch::filterDrafts($filter);
@@ -54,7 +54,7 @@ class RepositoryContextMenuComponent extends sfComponent
     // Set filter
     if (0 < count($filter->toArray()))
     {
-      $query->setFilter($filter);
+      $query->setPostFilter($filter);
     }
 
     $this->resultSet = QubitSearch::getInstance()->index->getType('QubitInformationObject')->search($query);

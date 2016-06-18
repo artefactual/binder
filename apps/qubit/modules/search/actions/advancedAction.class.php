@@ -199,7 +199,7 @@ class SearchAdvancedAction extends DefaultBrowseAction
         if (isset($term) && $term->id == $value)
         {
           // Filtered query for documents without copyright status
-          $queryAll = new \Elastica\Query\MatchAll();
+          $queryAll = new \Elastica\Query\MatchAll;
           $filter = new \Elastica\Filter\Missing;
           $filter->setField('copyrightStatusId');
           $filteredQuery = new \Elastica\Query\Filtered($queryAll, $filter);
@@ -208,7 +208,7 @@ class SearchAdvancedAction extends DefaultBrowseAction
           $query = new \Elastica\Query\Term;
           $query->setTerm('copyrightStatusId', $value);
 
-          $queryBool = new \Elastica\Query\Bool();
+          $queryBool = new \Elastica\Query\BoolQuery;
           $queryBool->addShould($query);
           $queryBool->addShould($filteredQuery);
 
@@ -264,7 +264,7 @@ class SearchAdvancedAction extends DefaultBrowseAction
 
         if ($fonds instanceof QubitInformationObject)
         {
-          $query = new \Elastica\Query\Bool();
+          $query = new \Elastica\Query\BoolQuery;
 
           $queryAncestors = new \Elastica\Query\Term;
           $queryAncestors->setTerm('ancestors', $fonds->id);
@@ -283,7 +283,7 @@ class SearchAdvancedAction extends DefaultBrowseAction
 
   protected function parseQuery()
   {
-    $queryBool = new \Elastica\Query\Bool();
+    $queryBool = new \Elastica\Query\BoolQuery;
     $culture = $this->context->user->getCulture();
 
     $count = -1;
@@ -362,7 +362,7 @@ class SearchAdvancedAction extends DefaultBrowseAction
           break;
 
         case 'place':
-          $queryField = new \Elastica\Query\Bool();
+          $queryField = new \Elastica\Query\BoolQuery;
 
           $queryPlaceTermName = new \Elastica\Query\QueryString($query);
           $queryPlaceTermName->setFields(arElasticSearchPluginUtil::getI18nFieldNames('places.i18n.%s.name'));
@@ -396,11 +396,11 @@ class SearchAdvancedAction extends DefaultBrowseAction
         case 'or':
           // Build boolean query with all the previous queries
           // and the new one as 'shoulds'
-          $queryOr = new \Elastica\Query\Bool();
+          $queryOr = new \Elastica\Query\BoolQuery;
           $queryOr->addShould($queryBool);
           $queryOr->addShould($queryField);
 
-          $queryBool = new \Elastica\Query\Bool();
+          $queryBool = new \Elastica\Query\BoolQuery;
           $queryBool->addMust($queryOr);
 
           break;
@@ -458,7 +458,7 @@ class SearchAdvancedAction extends DefaultBrowseAction
       throw new sfException;
     }
 
-    // Bulding a \Elastica\Query\Bool object from the search criterias
+    // Bulding a \Elastica\Query\BoolQuery object from the search criterias
     if (null !== $criterias = $this->parseQuery())
     {
       $this->queryBool->addMust($criterias);
@@ -487,7 +487,7 @@ class SearchAdvancedAction extends DefaultBrowseAction
     // Set filter
     if (0 < count($this->filterBool->toArray()))
     {
-      $this->query->setFilter($this->filterBool);
+      $this->query->setPostFilter($this->filterBool);
     }
 
     $resultSet = QubitSearch::getInstance()->index->getType('QubitInformationObject')->search($this->query);
