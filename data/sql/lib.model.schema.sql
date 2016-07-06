@@ -471,6 +471,7 @@ CREATE TABLE `information_object`
 	`source_culture` VARCHAR(7)  NOT NULL,
 	PRIMARY KEY (`id`),
 	UNIQUE KEY `information_object_U_1` (`oai_local_identifier`),
+	KEY `lft`(`lft`),
 	CONSTRAINT `information_object_FK_1`
 		FOREIGN KEY (`id`)
 		REFERENCES `object` (`id`)
@@ -860,6 +861,36 @@ CREATE TABLE `physical_object_i18n`
 		FOREIGN KEY (`id`)
 		REFERENCES `physical_object` (`id`)
 		ON DELETE CASCADE
+)Engine=InnoDB;
+
+#-----------------------------------------------------------------------------
+#-- premis_object
+#-----------------------------------------------------------------------------
+
+DROP TABLE IF EXISTS `premis_object`;
+
+
+CREATE TABLE `premis_object`
+(
+	`id` INTEGER  NOT NULL,
+	`information_object_id` INTEGER,
+	`puid` VARCHAR(255),
+	`filename` VARCHAR(1024),
+	`last_modified` DATETIME,
+	`date_ingested` DATE,
+	`size` INTEGER,
+	`mime_type` VARCHAR(255),
+	`created_at` DATETIME  NOT NULL,
+	`updated_at` DATETIME  NOT NULL,
+	PRIMARY KEY (`id`),
+	CONSTRAINT `premis_object_FK_1`
+		FOREIGN KEY (`id`)
+		REFERENCES `object` (`id`)
+		ON DELETE CASCADE,
+	INDEX `premis_object_FI_2` (`information_object_id`),
+	CONSTRAINT `premis_object_FK_2`
+		FOREIGN KEY (`information_object_id`)
+		REFERENCES `information_object` (`id`)
 )Engine=InnoDB;
 
 #-----------------------------------------------------------------------------

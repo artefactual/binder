@@ -159,6 +159,8 @@ propel:
     display_standard_id: { type: integer, foreignTable: term, foreignReference: id, onDelete: setnull }
     lft: { type: integer, required: true, nestedSetLeftKey: true }
     rgt: { type: integer, required: true, nestedSetRightKey: true }
+    _indexes:
+      lft: [lft]
 
   information_object_i18n:
     title: varchar(1024)
@@ -265,6 +267,18 @@ propel:
     name: varchar(1024)
     description: longvarchar
     location: longvarchar
+
+  premis_object:
+    id: { type: integer, required: true, primaryKey: true, foreignTable: object, foreignReference: id, onDelete: cascade, inheritanceKey: true }
+    information_object_id:
+    puid: varchar(255)
+    filename: varchar(1024)
+    last_modified: timestamp
+    date_ingested: bu_date
+    size: integer
+    mime_type: varchar(255)
+    created_at:
+    updated_at:
 
   property:
     object_id: { type: integer, required: true, foreignTable: object, foreignReference: id, onDelete: cascade }

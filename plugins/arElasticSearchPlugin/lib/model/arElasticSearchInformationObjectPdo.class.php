@@ -1037,35 +1037,6 @@ class arElasticSearchInformationObjectPdo
     return self::$statements['artworkArtist']->fetchColumn();
   }
 
-  protected function getMetsData()
-  {
-    $aipUUID = $this->getProperty('aipUUID');
-    $objectUUID = $this->getProperty('objectUUID');
-    if (null === $aipUUID || null === $objectUUID)
-    {
-      return;
-    }
-
-    // Get METS filepath
-    $metsFilepath = sfConfig::get('sf_web_dir').
-      DIRECTORY_SEPARATOR.'uploads'.
-      DIRECTORY_SEPARATOR.'aips'.
-      DIRECTORY_SEPARATOR.$aipUUID.
-      DIRECTORY_SEPARATOR.'METS.xml';
-
-    try
-    {
-      $parser = new QubitMetsParser($metsFilepath);
-      $metsData = $parser->getInformationObjectDataForSearchIndex($objectUUID);
-    }
-    catch (Exception $e)
-    {
-      return;
-    }
-
-    return $metsData;
-  }
-
   public function serialize()
   {
     $serialized = array();
@@ -1212,10 +1183,11 @@ class arElasticSearchInformationObjectPdo
       $serialized['aips'][] = $node->serialize();
     }
 
-    // METS data
-    if ($this->level_of_description_id === sfConfig::get('app_drmc_lod_digital_object_id') && null !== $metsData = $this->getMetsData())
+    // PREMIS data
+    if ($this->level_of_description_id === sfConfig::get('app_drmc_lod_digital_object_id')
+      && null !== $premisData = arElasticSearchPluginUtil::getPremisData($this->id, self::$conn))
     {
-      $serialized['metsData'] = $metsData;
+      $serialized['metsData'] = $premisData;
     }
 
     // TMS object

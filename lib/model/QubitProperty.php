@@ -70,7 +70,7 @@ class QubitProperty extends BaseProperty
   {
     parent::delete($connection);
 
-    if ($this->getObject() instanceof QubitInformationObject)
+    if ($this->indexOnSave && $this->getObject() instanceof QubitInformationObject)
     {
       QubitSearch::getInstance()->update($this->getObject());
     }
@@ -138,6 +138,11 @@ class QubitProperty extends BaseProperty
       if (isset($options['scope']))
       {
         $property->setScope($options['scope']);
+      }
+
+      if (isset($options['indexOnSave']) && !$options['indexOnSave'])
+      {
+        $property->indexOnSave = false;
       }
 
       $property->save();

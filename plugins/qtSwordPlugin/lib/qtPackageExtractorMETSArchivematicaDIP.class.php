@@ -161,26 +161,7 @@ class qtPackageExtractorMETSArchivematicaDIP extends qtPackageExtractorBase
 
           sfContext::getInstance()->getLogger()->info('METSArchivematicaDIP - Opening '.$path);
 
-          // Directory for the METS file
-          $dirPath = sfConfig::get('sf_web_dir').
-            DIRECTORY_SEPARATOR.'uploads'.
-            DIRECTORY_SEPARATOR.'aips'.
-            DIRECTORY_SEPARATOR.$this->aipUUID.
-            DIRECTORY_SEPARATOR;
-
-          // Create the target directory
-          if (!file_exists($dirPath))
-          {
-            mkdir($dirPath, 0755, true);
-          }
-
-          // Copy METS file
-          if (false !== @copy($path, $dirPath.'METS.xml'))
-          {
-            sfContext::getInstance()->getLogger()->info('METSArchivematicaDIP - Saving '.$dirPath.'METS.xml');
-          }
-
-          $this->document = new SimpleXMLElement(@file_get_contents($this->filename.DIRECTORY_SEPARATOR.$entry));
+          $this->document = new SimpleXMLElement(@file_get_contents($path));
 
           break;
         }
@@ -198,6 +179,10 @@ class qtPackageExtractorMETSArchivematicaDIP extends qtPackageExtractorBase
       throw new sfException('METS document could not be opened.');
     }
 
+    // Initialice METS parser, used in addDigitalObjects to add
+    // the required data from the METS file to the digital objects
+    $this->metsParser = new QubitMetsParser($this->document);
+    
     $this->document->registerXPathNamespace('m', 'http://www.loc.gov/METS/');
 
     // Check Archivematica Binder prefix
@@ -276,6 +261,7 @@ class qtPackageExtractorMETSArchivematicaDIP extends qtPackageExtractorBase
     $relation->object = $resource;
     $relation->subject = $aip;
     $relation->typeId = QubitTerm::AIP_RELATION_ID;
+    $relation->indexOnSave = false;
     $relation->save();
 
     if (isset($rootTechRecord))
@@ -285,6 +271,7 @@ class qtPackageExtractorMETSArchivematicaDIP extends qtPackageExtractorBase
       $relation->object = $rootTechRecord;
       $relation->subject = $aip;
       $relation->typeId = QubitTerm::AIP_RELATION_ID;
+      $relation->indexOnSave = false;
       $relation->save();
 
       // Add AIP to the root tech record in ES
@@ -329,6 +316,7 @@ class qtPackageExtractorMETSArchivematicaDIP extends qtPackageExtractorBase
       $tmsObject->parentId = QubitInformationObject::ROOT_ID;
       $tmsObject->levelOfDescriptionId = sfConfig::get('app_drmc_lod_artwork_record_id');
       $tmsObject->setPublicationStatusByName('Published');
+      $tmsObject->indexOnSave = false;
 
       $fetchTms = new arFetchTms;
 
@@ -361,7 +349,7 @@ class qtPackageExtractorMETSArchivematicaDIP extends qtPackageExtractorBase
 
         // Save info object components ids as property of the artwork
         // because they are not directly related but added as part of the artwork in ES
-        QubitProperty::addUnique($tmsObject->id, 'childComponents', serialize($tmsComponentsIoIds));
+        QubitProperty::addUnique($tmsObject->id, 'childComponents', serialize($tmsComponentsIoIds), array('indexOnSave' => false));
       }
     }
 
@@ -398,6 +386,7 @@ class qtPackageExtractorMETSArchivematicaDIP extends qtPackageExtractorBase
       $relation->object = $component;
       $relation->subject = $aip;
       $relation->typeId = QubitTerm::AIP_RELATION_ID;
+      $relation->indexOnSave = false;
       $relation->save();
 
       // Add AIP to the component in ES
@@ -415,11 +404,13 @@ class qtPackageExtractorMETSArchivematicaDIP extends qtPackageExtractorBase
     $relation->object = $tmsObject;
     $relation->subject = $aip;
     $relation->typeId = QubitTerm::AIP_RELATION_ID;
+    $relation->indexOnSave = false;
     $relation->save();
 
     // Add related digital objects and ingestionUser to the AIP in ES
     // and save AIP and components data for the artwork in ES
     QubitSearch::getInstance()->update($aip);
+    QubitSearch::getInstance()->update($aipIo);
     QubitSearch::getInstance()->update($tmsObject);
   }
 
@@ -443,6 +434,7 @@ class qtPackageExtractorMETSArchivematicaDIP extends qtPackageExtractorBase
       list($aipIo, $creation) = $this->processDmdSec($dmdSec, $aipIo, $options = array('ignoreTitle' => false));
     }
 
+    $aipIo->indexOnSave = false;
     $aipIo->save();
 
     if (count($creation))
@@ -450,12 +442,10 @@ class qtPackageExtractorMETSArchivematicaDIP extends qtPackageExtractorBase
       $event = new QubitEvent;
       $event->informationObjectId = $aipIo->id;
       $event->typeId = QubitTerm::CREATION_ID;
+      $event->indexOnSave = false;
 
       qtSwordPlugin::addDataToCreationEvent($event, $creation);
     }
-
-    // Add creation events to ES
-    QubitSearch::getInstance()->update($aipIo);
 
     sfContext::getInstance()->getLogger()->info('METSArchivematicaDIP - $aipIo created '.$aipIo->id);
 
@@ -489,6 +479,7 @@ class qtPackageExtractorMETSArchivematicaDIP extends qtPackageExtractorBase
       $aip->createdAt = $createdAt;
     }
 
+    $aip->indexOnSave = false;
     $aip->save();
 
     // Get AIP ingenstion username
@@ -505,7 +496,7 @@ class qtPackageExtractorMETSArchivematicaDIP extends qtPackageExtractorBase
           $agentName = split(',', $agentName);
           $agentName = substr($agentName[0], 10, strlen($agentName[0]) - 11);
 
-          QubitProperty::addUnique($aip->id, 'ingestionUser', $agentName);
+          QubitProperty::addUnique($aip->id, 'ingestionUser', $agentName, array('indexOnSave' => false));
 
           break;
         }
@@ -513,7 +504,7 @@ class qtPackageExtractorMETSArchivematicaDIP extends qtPackageExtractorBase
     }
 
     // Add parent title of the AIP information object as attachedTo property for the AIP
-    QubitProperty::addUnique($aip->id, 'attachedTo', $informationObjectParent->getTitle(array('sourceCulture' => true)));
+    QubitProperty::addUnique($aip->id, 'attachedTo', $informationObjectParent->getTitle(array('sourceCulture' => true)), array('indexOnSave' => false));
 
     sfContext::getInstance()->getLogger()->info('METSArchivematicaDIP - $aip created '.$aip->id);
 
@@ -546,11 +537,15 @@ class qtPackageExtractorMETSArchivematicaDIP extends qtPackageExtractorBase
       $child->digitalObjects[] = $digitalObject;
     }
 
+    $child->indexOnSave = false;
     $child->save();
 
     // Store relative path within AIP and AIP UUID
-    QubitProperty::addUnique($child->id, 'original_relative_path_within_aip', 'METS.'.$this->aipUUID.'.xml');
-    QubitProperty::addUnique($child->id, 'aipUUID', $this->aipUUID);
+    QubitProperty::addUnique($child->id, 'original_relative_path_within_aip', 'METS.'.$this->aipUUID.'.xml', array('indexOnSave' => false));
+    QubitProperty::addUnique($child->id, 'aipUUID', $this->aipUUID, array('indexOnSave' => false));
+
+    // Add child to ES
+    QubitSearch::getInstance()->update($child);
 
     $mapping = $this->getStructMapFileToDmdSecMapping();
 
@@ -619,6 +614,7 @@ class qtPackageExtractorMETSArchivematicaDIP extends qtPackageExtractorBase
       $child->levelOfDescriptionId = sfConfig::get('app_drmc_lod_digital_object_id');
       $child->setPublicationStatusByName('Published');
       $child->title = $relativePathWithinAipParts['basename']; // Notice that we use the filename of the original file, not the access copy
+      $child->indexOnSave = false;
 
       // Files other than the ones under USE="original" are not included
       if ($use === 'original' && false !== $absolutePathWithinDip && is_readable($absolutePathWithinDip))
@@ -644,6 +640,7 @@ class qtPackageExtractorMETSArchivematicaDIP extends qtPackageExtractorBase
           $event = new QubitEvent;
           $event->informationObjectId = $child->id;
           $event->typeId = QubitTerm::CREATION_ID;
+          $event->indexOnSave = false;
 
           qtSwordPlugin::addDataToCreationEvent($event, $creation);
         }
@@ -658,16 +655,22 @@ class qtPackageExtractorMETSArchivematicaDIP extends qtPackageExtractorBase
       $property->objectId = $child->id;
       $property->setName('original_relative_path_within_aip');
       $property->setValue($relativePathWithinAip);
+      $property->indexOnSave = false;
       $property->save();
 
       // Storage UUIDs
-      QubitProperty::addUnique($child->id, 'objectUUID', $uuid);
-      QubitProperty::addUnique($child->id, 'aipUUID', $this->aipUUID);
+      QubitProperty::addUnique($child->id, 'objectUUID', $uuid, array('indexOnSave' => false));
+      QubitProperty::addUnique($child->id, 'aipUUID', $this->aipUUID, array('indexOnSave' => false));
 
-      // Save creation event in ES
-      // A lot more data from the METS file (object metadata, events, agents)
-      // is obtained in arElasticSearchInformationObjectPdo
-      QubitSearch::getInstance()->update($child);
+      // Add required data from METS file to the database
+      $error = $this->metsParser->addMetsDataToInformationObject($child, $uuid);
+      if (isset($error))
+      {
+        sfContext::getInstance()->getLogger()->info('METSArchivematicaDIP -             ' . $error);
+      }
+
+      $child->indexOnSave = true;
+      $child->save();
     }
 
     return;

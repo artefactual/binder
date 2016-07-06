@@ -280,6 +280,12 @@ mapping:
       status: { type: string, index: not_analyzed, include_in_all: false }
       media_format: { type: string, index: not_analyzed, include_in_all: false }
 
+  premis_object:
+    _attributes:
+      nested_only: true
+    _foreign_types:
+      mets_data: mets_data
+
   #
   # Main types
   #
@@ -299,7 +305,7 @@ mapping:
               name: { type: string, index: not_analyzed, include_in_all: false }
     _foreign_types:
       type: term
-      digital_objects: information_object
+      digital_objects: premis_object
     dynamic: true
     properties:
       uuid: { type: string, index: not_analyzed, include_in_all: false }

@@ -112,7 +112,20 @@ class arElasticSearchAipPdo
     self::$statements['do'] = self::$conn->prepare($sql);
     self::$statements['do']->execute(array($this->uuid, 'aipUUID'));
 
-    return self::$statements['do']->fetchAll(PDO::FETCH_OBJ);
+    $digitalObejcts = array();
+
+    foreach (self::$statements['do']->fetchAll(PDO::FETCH_OBJ) as $item)
+    {
+      if (null !== $premisData = arElasticSearchPluginUtil::getPremisData($item->object_id, self::$conn))
+      {
+        $digitalObjects[] = array('metsData' => $premisData);
+      }
+    }
+
+    if (!empty($digitalObjects))
+    {
+      return $digitalObjects;
+    }
   }
 
   protected function getPartOfLevelOfDescriptionId($id)
@@ -237,10 +250,9 @@ class arElasticSearchAipPdo
       }
     }
 
-    foreach ($this->getDigitalObjects() as $item)
+    if (null !== $digitalObjects = $this->getDigitalObjects())
     {
-      $node = new arElasticSearchInformationObjectPdo($item->object_id);
-      $serialized['digitalObjects'][] = $node->serialize();
+      $serialized['digitalObjects'] = $digitalObjects;
     }
 
     if (null !== $ingestionUser = $this->getProperty('ingestionUser'))

@@ -255,6 +255,8 @@ class arFetchTms
         $creationEvent->typeId = QubitTerm::CREATION_ID;
       }
 
+      $creationEvent->indexOnSave = false;
+
       // Add data
       qtSwordPlugin::addDataToCreationEvent($creationEvent, $creation);
     }
@@ -274,6 +276,7 @@ class arFetchTms
       // all the tms_attributes properties are deleted first
       foreach ($tmsComponent->getProperties(null, 'tms_attributes') as $property)
       {
+        $property->indexOnSave = false;
         $property->delete();
       }
 
@@ -441,6 +444,7 @@ class arFetchTms
 
   public function updateArtwork($artwork)
   {
+    $artwork->indexOnSave = false;
     list($tmsComponentsIds, $artworkThumbnail) = $this->getTmsObjectData($artwork, $artwork->identifier);
 
     // Get intermediate level
@@ -497,6 +501,7 @@ class arFetchTms
     $property->setName('childComponents');
     $property->setValue(serialize($tmsComponentsIoIds));
     $property->setObjectId($artwork->id);
+    $property->indexOnSave = false;
     $property->save();
 
     // Update non already updated descendants in ES
@@ -562,6 +567,7 @@ sql;
       }
 
       $property->value = $value;
+      $property->indexOnSave = false;
       $property->save();
     }
     else
@@ -590,6 +596,7 @@ sql;
     if (isset($termRelation))
     {
       $termRelation->setTermId($term->id);
+      $termRelation->indexOnSave = false;
       $termRelation->save();
     }
     // Or create new one
@@ -618,6 +625,7 @@ sql;
     if (isset($note))
     {
       $note->content = $content;
+      $note->indexOnSave = false;
       $note->save();
     }
     // Or create new one
