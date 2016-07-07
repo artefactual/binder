@@ -21,11 +21,7 @@ class ApiSummaryStorageUsedByMediaCategoryAction extends QubitApiAction
 {
   protected function get($request)
   {
-    $data = array();
-
-    $data['results'] = $this->getResults();
-
-    return $data;
+    return array('results' => $this->getResults());
   }
 
   protected function getResults()

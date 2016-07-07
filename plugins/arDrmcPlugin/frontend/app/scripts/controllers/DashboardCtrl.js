@@ -17,7 +17,8 @@
         StatisticsService.getRunningTotalByCodec(),
         StatisticsService.getRunningTotalByFormat(),
         StatisticsService.getArtworkSizesByYearSummary(),
-        StatisticsService.getArtworkCountsAndTotalsByDate()
+        StatisticsService.getArtworkCountsAndTotalsByDate(),
+        StatisticsService.getStorageSizeByDateSummary()
       ];
 
       $q.all(queries).then(function (responses) {
@@ -79,6 +80,22 @@
           xLabelFormat: 'yearAndMonth',
           yProperty: 'total',
           data: responses[7].data.results.creation
+        }];
+        $scope.totalStorageSizeByDate = [{
+          name: 'Month',
+          color: 'hotpink',
+          xProperty: 'month',
+          xLabelFormat: 'yearAndMonth',
+          yProperty: 'total',
+          data: responses[8].data.results
+        }];
+        $scope.countStorageSizeByDate = [{
+          name: 'Month',
+          color: 'hotpink',
+          xProperty: 'month',
+          xLabelFormat: 'yearAndMonth',
+          yProperty: 'count',
+          data: responses[8].data.results
         }];
         // Levels of description to determine part_of link in ingests tab
         $scope.artworkId = parseInt(SETTINGS.drmc.lod_artwork_record_id);

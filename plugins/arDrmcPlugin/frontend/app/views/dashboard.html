@@ -247,6 +247,9 @@
   <div class="span6 dashboard-widget">
     <h3 class="fontello drmc-icon-chart-line">Monthly totals</h3>
     <tabset class="dashboard-rs-graph">
+      <tab heading="Storage">
+        <ar:graph-line class="size-graph" data="{{ countStorageSizeByDate }}" type="line" width="400" height="280" xper-tick="100" yper-tick="40" y-filter="unitFilterRounded"></ar:graph-line>
+      </tab>
       <tab heading="Ingest date">
         <ar:graph-line data="{{ monthlyCountsByCreation }}" type="line" width="400" height="280" xper-tick="100" yper-tick="40"></ar:graph-line>
       </tab>
@@ -264,6 +267,9 @@
   <div class="span6 dashboard-widget">
     <h3 class="fontello drmc-icon-chart-line">Running totals</h3>
     <tabset class="dashboard-rs-graph">
+      <tab heading="Storage">
+        <ar:graph-line class="size-graph" data="{{ totalStorageSizeByDate }}" type="line" width="400" height="280" xper-tick="100" yper-tick="40" y-filter="unitFilterRounded"></ar:graph-line>
+      </tab>
       <tab heading="Ingest date">
         <ar:graph-line data="{{ monthlyTotalsByCreation }}" type="line" width="400" height="280" xper-tick="100" yper-tick="40"></ar:graph-line>
       </tab>
@@ -278,7 +284,7 @@
     <h3 class="fontello drmc-icon-chart-line">Average sizes</h3>
     <tabset class="dashboard-rs-graph">
       <tab heading="All">
-        <ar:graph-line id="average_artwork_size_graph" type="line" data="{{ artworkSizes }}" width="400" height="280" xper-tick="50" yper-tick="40" y-filter="unitFilterRounded"></ar:graph-line>
+        <ar:graph-line class="size-graph" type="line" data="{{ artworkSizes }}" width="400" height="280" xper-tick="50" yper-tick="40" y-filter="unitFilterRounded"></ar:graph-line>
       </tab>
     </tabset>
   </div>

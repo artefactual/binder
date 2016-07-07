@@ -86,6 +86,13 @@
       });
     };
 
+    this.getStorageSizeByDateSummary = function () {
+      return $http({
+        method: 'GET',
+        url: SETTINGS.frontendPath + 'api/summary/storagesizebydate'
+      });
+    };
+
   });
 
 })();

@@ -309,6 +309,11 @@ class QubitAPIAction extends sfAction
         $facet->setField($field);
         $facet->setInterval($options['interval']);
 
+        if (isset($options['valueField']))
+        {
+          $facet->setKeyValueFields($field, $options['valueField']);
+        }
+
         // As dates are stored as UTC, adjust to local timezone
         $timezoneOffsetHours = date('Z') / 60 / 60; // local timezone offset from UTC, in hours
 

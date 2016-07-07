@@ -274,6 +274,10 @@ class arRestApiPluginConfiguration extends sfPluginConfiguration
       'module' => 'api',
       'action' => 'summaryMediaFilesizeByYear'));
 
+    $this->addRoute('GET', '/api/summary/storagesizebydate', array(
+      'module' => 'api',
+      'action' => 'summaryStorageSizeByDate'));
+
     /**
      * Search
      */

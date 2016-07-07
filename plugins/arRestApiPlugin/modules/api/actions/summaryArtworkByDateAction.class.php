@@ -21,18 +21,13 @@ class ApiSummaryArtworkByDateAction extends QubitApiAction
 {
   protected function get($request)
   {
-    $data = array();
-
-    $data['results'] = $this->getResults();
-
-    return $data;
+    return array('results' => $this->getResults());
   }
 
   protected function getResults()
   {
-    // Create query objects
+    // Create query object
     $query = new \Elastica\Query;
-    $queryBool = new \Elastica\Query\BoolQuery;
 
     // Get all artwork records
     $queryMatch = new \Elastica\Query\Match;
@@ -40,10 +35,9 @@ class ApiSummaryArtworkByDateAction extends QubitApiAction
       'levelOfDescriptionId',
       sfConfig::get('app_drmc_lod_artwork_record_id')
     );
-    $queryBool->addShould($queryMatch);
 
     // Assign query
-    $query->setQuery($queryBool);
+    $query->setQuery($queryMatch);
 
     // We don't need details, just facet results
     $query->setLimit(0);
@@ -87,12 +81,12 @@ class ApiSummaryArtworkByDateAction extends QubitApiAction
         $result['count'] = $entry['count'];
 
         // Convert millisecond timestamps to years and months
-        $timestamp = $entry['time'] / 1000;
-        $result['year'] = (integer)substr(date('Y-m-d', $timestamp), 0, 4);
+        $date = date('Y-m-d', $entry['time'] / 1000);
+        $result['year'] = (integer)substr($date, 0, 4);
 
         if ($facetName == 'creation')
         {
-          $result['month'] = (integer)substr(date('Y-m-d', $timestamp), 5, 2);
+          $result['month'] = (integer)substr($date, 5, 2);
 
           if (isset($previousResult))
           {
@@ -142,15 +136,16 @@ class ApiSummaryArtworkByDateAction extends QubitApiAction
         $previousResult = $result;
       }
 
-      $currentYear = (integer)substr(date('Y-m-d'), 0, 4);
+      $today = date('Y-m-d');
+      $currentYear = (integer)substr($today, 0, 4);
 
       if ($facetName == 'creation')
       {
-        $currentMonth = (integer)substr(date('Y-m-d'), 5, 2);
+        $currentMonth = (integer)substr($today, 5, 2);
 
         // Add missing months at the end to creation results
-        while ($currentYear !== $previousResult['year'] &&
-          $currentMonth !== $previousResult['month'])
+        while ($currentYear > $previousResult['year'] ||
+          $currentMonth > $previousResult['month'])
         {
           $missingResult = array();
           $missingResult['total'] = $previousResult['total'];

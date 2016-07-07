@@ -59,9 +59,9 @@
             // add padding to max
             max = max + (max / 10);
 
-            // set optional element ID
-            if (typeof attrs.id !== 'undefined') {
-              element.attr('id', attrs.id);
+            // set optional element class
+            if (typeof attrs.class !== 'undefined') {
+              element.attr('class', attrs.id);
             }
 
             if (dataFound) {
