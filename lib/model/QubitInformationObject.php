@@ -360,6 +360,12 @@ class QubitInformationObject extends BaseInformationObject
    */
   public function delete($connection = null)
   {
+    // Delete related premisObjects
+    foreach ($this->premisObjects as $premisObject)
+    {
+      $premisObject->delete();
+    }
+
     // Physical object relations
     $relations = QubitRelation::getRelationsByObjectId($this->id, array('typeId' => QubitTerm::HAS_PHYSICAL_OBJECT_ID));
     foreach ($relations as $item)
