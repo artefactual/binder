@@ -1249,8 +1249,12 @@ class arElasticSearchInformationObjectPdo
       {
         foreach (unserialize($childComponents) as $item)
         {
-          $node = new arElasticSearchInformationObjectPdo($item);
-          $serialized['tmsChildComponents'][] = $node->serialize();
+          try
+          {
+            $node = new arElasticSearchInformationObjectPdo($item);
+            $serialized['tmsChildComponents'][] = $node->serialize();
+          }
+          catch (sfException $e) {}
         }
       }
     }
