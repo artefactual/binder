@@ -66,7 +66,7 @@ EOF;
     }
   }
 
-  public function run()
+  public function run($arguments = array(), $options = array())
   {
     $timer = new QubitTimer;
 
