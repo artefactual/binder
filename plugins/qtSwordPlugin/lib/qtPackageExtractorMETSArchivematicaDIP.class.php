@@ -547,14 +547,14 @@ class qtPackageExtractorMETSArchivematicaDIP extends qtPackageExtractorBase
     // Add child to ES
     QubitSearch::getInstance()->update($child);
 
-    $mapping = $this->getStructMapFileToDmdSecMapping();
-
     $files = $this->document->xpath('//m:mets/m:fileSec/m:fileGrp/m:file');
     if (false === $files || count($files) === 0)
     {
       sfContext::getInstance()->getLogger()->err('METSArchivematicaDIP - addDigitalObjects(): fileGrp not found');
       return;
     }
+
+    $mapping = $this->getStructMapFileToDmdSecMapping();
 
     foreach ($files as $file)
     {
@@ -740,7 +740,13 @@ class qtPackageExtractorMETSArchivematicaDIP extends qtPackageExtractorBase
 
   protected function getMainDmdSec()
   {
-    foreach ($this->document->xpath('//m:structMap[@TYPE="logical" or @TYPE="physical"]') as $item)
+    $structMaps = $this->document->xpath('//m:structMap[@TYPE="logical" or @TYPE="physical"]');
+    if (empty($structMaps))
+    {
+      throw new sfException('Not logical or physical structMap found');
+    }
+
+    foreach ($structMaps as $item)
     {
       $item->registerXPathNamespace('m', 'http://www.loc.gov/METS/');
 
