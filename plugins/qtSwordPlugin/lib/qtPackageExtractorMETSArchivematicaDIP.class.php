@@ -740,7 +740,7 @@ class qtPackageExtractorMETSArchivematicaDIP extends qtPackageExtractorBase
 
   protected function getMainDmdSec()
   {
-    $structMaps = $this->document->xpath('//m:structMap[@TYPE="logical" or @TYPE="physical"]');
+    $structMaps = $this->document->xpath('//m:structMap');
     if (empty($structMaps))
     {
       throw new sfException('Not logical or physical structMap found');
