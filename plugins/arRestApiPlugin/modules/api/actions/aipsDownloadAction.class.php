@@ -50,6 +50,11 @@ class ApiAipsDownloadAction extends QubitApiAction
     $ch = curl_init($request->url);
     curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1); // Storage service redirects
     curl_setopt($ch, CURLOPT_FAILONERROR, true);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+      sprintf('Authorization: ApiKey %s:%s', sfConfig::get('app_drmc_ss_user'), sfConfig::get('app_drmc_ss_api_key')),
+      'User-Agent: DRMC',
+    ));
+
     $response = curl_exec($ch);
     curl_close($ch);
 

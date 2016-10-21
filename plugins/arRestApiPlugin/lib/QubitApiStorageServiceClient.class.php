@@ -21,38 +21,6 @@ class QubitApiStorageServiceClient
 {
   public $status;
 
-  function __construct($urlPath)
-  {
-    $this->setConfig();
-  }
-
-  private function setConfig()
-  {
-    // Get configuration needed to access storage service
-    $ssConfig = array();
-    $ssEnvVars = array(
-      'ARCHIVEMATICA_SS_HOST' => '127.0.0.1',
-      'ARCHIVEMATICA_SS_PORT' => '8000',
-      'ARCHIVEMATICA_SS_PIPELINE_UUID' => ''
-    );
-
-    // Determine configuration based on environment variable settings
-    foreach ($ssEnvVars as $var => $default)
-    {
-      // Get Archivematica storage service host
-      $value = getenv($var);
-
-      if (false === $value && empty($default))
-      {
-        throw new QubitApiException($var + ' not configured', 500);
-      }
-
-      $ssConfig[$var] = ($value) ? $value : $default;
-    }
-
-    $this->config = $ssConfig;
-  }
-
   public function get($urlPath)
   {
     $this->verifyPipelineExists();
@@ -67,7 +35,7 @@ class QubitApiStorageServiceClient
 
   private function verifyPipelineExists()
   {
-    $uuid = $this->config['ARCHIVEMATICA_SS_PIPELINE_UUID'];
+    $uuid = sfConfig::get('app_drmc_ss_pipeline_uuid');
 
     $this->request('api/v2/pipeline/'. $uuid);
     if ($this->status == 404)
@@ -79,13 +47,18 @@ class QubitApiStorageServiceClient
   private function request($urlPath, $postData = FALSE)
   {
     // Assemble storage server URL
-    $storageServiceUrl = 'http://'. $this->config['ARCHIVEMATICA_SS_HOST'];
-    $storageServiceUrl .= ':'. $this->config['ARCHIVEMATICA_SS_PORT'];
+    $storageServiceUrl = 'http://'. sfConfig::get('app_drmc_ss_host');
+    $storageServiceUrl .= ':'. sfConfig::get('app_drmc_ss_port');
     $url = $storageServiceUrl .'/'. $urlPath;
 
     $ch = curl_init($url);
     curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1); // allow redirects
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    
+    $headers = array(
+      sprintf('Authorization: ApiKey %s:%s', sfConfig::get('app_drmc_ss_user'), sfConfig::get('app_drmc_ss_api_key')),
+      'User-Agent: DRMC',
+    );
 
     if ($postData)
     {
@@ -99,20 +72,24 @@ class QubitApiStorageServiceClient
         {
           $postBody .= $key .'='. urlencode($value) .'&';
         }
+
         rtrim($postBody, '&');
-      } else {
+      }
+      else
+      {
         $postBody = $postData;
       }
 
       curl_setopt($ch, CURLOPT_POSTFIELDS, $postBody);
-      $headers = array('Content-type: application/json', 'Content-Length: '. strlen($postBody));
-      curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+      $headers = array_merge($headers, array('Content-type: application/json', 'Content-Length: '. strlen($postBody)));
     }
+
+    curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
 
     $result = curl_exec($ch);
     $this->status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 
-    // handle possible errors
+    // Handle possible errors
     if ($result === false)
     {
       $error = curl_error($ch);

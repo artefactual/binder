@@ -46,30 +46,9 @@ class ApiAipsDownloadCheckAction extends QubitApiAction
 
     $checkResult = array();
 
-    // Get configuration needed to access storage service
-    $ssConfig = array();
-    $ssEnvVars = array(
-      'ARCHIVEMATICA_SS_HOST' => '127.0.0.1',
-      'ARCHIVEMATICA_SS_PORT' => '8000'
-    );
-
-    // Determine configuration based on environment variable settings
-    foreach ($ssEnvVars as $var => $default)
-    {
-      // Get Archivematica storage service host
-      $value = getenv($var);
-
-      if (!$value && !$default)
-      {
-        throw new QubitApiException($var + ' not configured', 500);
-      }
-
-      $ssConfig[$var] = ($value) ? $value : $default;
-    }
-
     // Assemble storage service URL
-    $storageServiceUrl = 'http://'. $ssConfig['ARCHIVEMATICA_SS_HOST'];
-    $storageServiceUrl .= ':'. $ssConfig['ARCHIVEMATICA_SS_PORT'];
+    $storageServiceUrl = 'http://'. sfConfig::get('app_drmc_ss_host');
+    $storageServiceUrl .= ':'. sfConfig::get('app_drmc_ss_port');
     $aipUrl = $storageServiceUrl .'/api/v2/file';
 
     // Determine filename of AIP via REST call to storage service
@@ -79,6 +58,10 @@ class ApiAipsDownloadCheckAction extends QubitApiAction
     curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1); // Storage service redirects
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_FAILONERROR, true);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+      sprintf('Authorization: ApiKey %s:%s', sfConfig::get('app_drmc_ss_user'), sfConfig::get('app_drmc_ss_api_key')),
+      'User-Agent: DRMC',
+    ));
 
     $aipInfoJson = curl_exec($ch);
     $error = curl_error($ch);
@@ -164,6 +147,10 @@ class ApiAipsDownloadCheckAction extends QubitApiAction
     curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1); // Storage service redirects
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_NOBODY, true);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+      sprintf('Authorization: ApiKey %s:%s', sfConfig::get('app_drmc_ss_user'), sfConfig::get('app_drmc_ss_api_key')),
+      'User-Agent: DRMC',
+    ));
 
     $response = curl_exec($ch);
     $responseCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -187,6 +174,10 @@ class ApiAipsDownloadCheckAction extends QubitApiAction
     $ch = curl_init($url);
     curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+      sprintf('Authorization: ApiKey %s:%s', sfConfig::get('app_drmc_ss_user'), sfConfig::get('app_drmc_ss_api_key')),
+      'User-Agent: DRMC',
+    ));
 
     $response = curl_exec($ch);
     $responseCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);

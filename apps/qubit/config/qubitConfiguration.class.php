@@ -69,15 +69,8 @@ EOF
       sfConfig::set('app_read_only', filter_var($readOnly, FILTER_VALIDATE_BOOLEAN));
     }
 
-    // bootstrapDrmc assumes that the environment is configured, which may be
-    // not the case, e.g. during installation, etc...
-    try
-    {
-      $this->bootstrapDrmc();
-    }
-    catch (Exception $e)
-    {
-    }
+    // The bootstrapDrmc function needs the environment to be configured
+    $this->bootstrapDrmc();
   }
 
   /**
@@ -142,6 +135,34 @@ EOF
   {
     $databaseManager = new sfDatabaseManager($this);
     $conn = $databaseManager->getDatabase('propel')->getConnection();
+
+    // Load Storage Service configuration from environment or defaults
+    $ssConfig = array();
+    $ssEnvVars = array(
+      'ARCHIVEMATICA_SS_HOST' => '127.0.0.1',
+      'ARCHIVEMATICA_SS_PORT' => '8000',
+      'ARCHIVEMATICA_SS_PIPELINE_UUID' => false,
+      'ARCHIVEMATICA_SS_USER' => false,
+      'ARCHIVEMATICA_SS_API_KEY' => false
+    );
+
+    foreach ($ssEnvVars as $var => $default)
+    {
+      $value = getenv($var);
+
+      if (!$value && !$default)
+      {
+        throw new sfException($var . ' not configured', 500);
+      }
+
+      $ssConfig[$var] = ($value) ? $value : $default;
+    }
+
+    sfConfig::set('app_drmc_ss_host', $ssConfig['ARCHIVEMATICA_SS_HOST']);
+    sfConfig::set('app_drmc_ss_port', $ssConfig['ARCHIVEMATICA_SS_PORT']);
+    sfConfig::set('app_drmc_ss_pipeline_uuid', $ssConfig['ARCHIVEMATICA_SS_PIPELINE_UUID']);
+    sfConfig::set('app_drmc_ss_user', $ssConfig['ARCHIVEMATICA_SS_USER']);
+    sfConfig::set('app_drmc_ss_api_key', $ssConfig['ARCHIVEMATICA_SS_API_KEY']);
 
     // Load env ATOM_DRMC_TMS_URL, defaults to "http://tms.example.org/TMSAPI/TmsObjectSvc/TmsObjects.svc"
     if (false === $envDrmcTmsUrl = getenv('ATOM_DRMC_TMS_URL'))
