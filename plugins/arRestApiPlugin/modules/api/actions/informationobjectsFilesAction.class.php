@@ -28,7 +28,7 @@ class ApiInformationObjectsFilesAction extends QubitApiAction
     // Pagination and sorting
     $this->prepareEsPagination($query);
     $this->prepareEsSorting($query, array(
-      'name' => 'filename',
+      'name' => 'i18n.' . $this->context->user->getCulture() . '.title',
       'size' => 'byteSize'));
 
     // Find document give its id and optionally its descendants
