@@ -253,11 +253,16 @@ class QubitAPIAction extends sfAction
     }
   }
 
-  protected function prepareEsSorting(\Elastica\Query &$query, $fields = array())
+  protected function prepareEsSorting(\Elastica\Query &$query, $fields = array(), $default = array())
   {
     // Stop if preferred option is not set or $fields empty
-    if (1 > count($fields) || !isset($this->request->sort))
+    if (empty($fields) || !isset($this->request->sort))
     {
+      if (!empty($default))
+      {
+        $query->setSort($default);
+      }
+
       return;
     }
 
@@ -268,12 +273,9 @@ class QubitAPIAction extends sfAction
     }
 
     $sortDirection = 'asc';
-    if (isset($this->request->sort_direction))
+    if (isset($this->request->sort_direction) && 'desc' == $this->request->sort_direction)
     {
-      if ('desc' == $this->request->sort_direction)
-      {
-        $sortDirection = 'desc';
-      }
+      $sortDirection = 'desc';
     }
 
     // TODO: allow $request->sort to be multi-value
