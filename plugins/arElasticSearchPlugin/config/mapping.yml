@@ -107,9 +107,9 @@ mapping:
       codec_extensions_usually_used: { type: string, index: not_analyzed, include_in_all: false }
       file_size: { type: long, index: not_analyzed, include_in_all: false }
       duration: { type: integer, index: not_analyzed, include_in_all: false }
-      bit_rate: { type: integer, index: not_analyzed, include_in_all: false }
+      bit_rate: { type: long, index: not_analyzed, include_in_all: false }
       bit_rate_mode: { type: string, index: not_analyzed, include_in_all: false }
-      overall_bit_rate: { type: integer, index: not_analyzed, include_in_all: false }
+      overall_bit_rate: { type: long, index: not_analyzed, include_in_all: false }
       channels: { type: integer, index: not_analyzed, include_in_all: false }
       channel_positions: { type: string, index: not_analyzed, include_in_all: false }
       sampling_rate: { type: integer, index: not_analyzed, include_in_all: false }
