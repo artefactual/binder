@@ -22,9 +22,8 @@ class qtPackageExtractorMETSArchivematicaDIP extends qtPackageExtractorBase
   protected function processDmdSec($xml, $informationObject, $options = array())
   {
     $xml->registerXPathNamespace('m', 'http://www.loc.gov/METS/');
-    $xml->registerXPathNamespace('dc', 'http://purl.org/dc/terms/');
 
-    $dublincore = $xml->xpath('.//m:mdWrap/m:xmlData/dc:dublincore/*');
+    $dublincore = $xml->xpath('.//m:mdWrap/m:xmlData/*[local-name()="dublincore"]/*');
 
     $creation = array();
 
@@ -357,9 +356,8 @@ class qtPackageExtractorMETSArchivematicaDIP extends qtPackageExtractorBase
     if (null != ($dmdSec = $this->getMainDmdSec()))
     {
       $dmdSec->registerXPathNamespace('m', 'http://www.loc.gov/METS/');
-      $dmdSec->registerXPathNamespace('dc', 'http://purl.org/dc/terms/');
 
-      if (0 < count($identifier = $dmdSec->xpath('.//m:mdWrap/m:xmlData/dc:dublincore/dc:identifier'))
+      if (0 < count($identifier = $dmdSec->xpath('.//m:mdWrap/m:xmlData/*[local-name()="dublincore"]/*[local-name()="identifier"]'))
         && strlen($componentNumber = trim($identifier[0])) > 0)
       {
         // Check for existing TMSComponent
@@ -793,14 +791,8 @@ class qtPackageExtractorMETSArchivematicaDIP extends qtPackageExtractorBase
 
   protected function searchFileDmdSec($uuid, $mapping)
   {
-    $node = $this->document->xpath('//m:mets/m:fileSec/m:fileGrp[@USE="original"]');
-
-    if (empty($node))
-    {
-      return;
-    }
-
-    foreach ($node[0] as $item)
+    $nodes = $this->document->xpath('//m:mets/m:fileSec/m:fileGrp[@USE="original"]/m:file');
+    foreach ($nodes as $item)
     {
       if (false !== strstr($item['ID'], $uuid))
       {
