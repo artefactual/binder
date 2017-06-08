@@ -77,9 +77,9 @@ following values are just examples):
     env[ARCHIVEMATICA_SS_USER] = "foo"
     env[ARCHIVEMATICA_SS_API_KEY] = "bar"
   
-# The host and port will default to "127.0.0.1" and "8000" respectively, but the
-  pipeline UUID, the user and the api key are mandatory and required for both, the
-  CLI and web environments
+The host and port will default to "127.0.0.1" and "8000" respectively, but the
+pipeline UUID, the user and the api key are mandatory and required for both, the
+CLI and web environments.
 
 **Project documentation:**
 
