@@ -53,6 +53,7 @@ EOF;
 
     // QubitSetting are not available for tasks? See lib/SiteSettingsFilter.class.php
     sfConfig::add(QubitSetting::getSettingsArray());
+    sfConfig::add(arDrmcBootstrapTask::getDrmcConfigArray());
 
     // Unset default net_gearman prefix for jobs
     define('NET_GEARMAN_JOB_CLASS_PREFIX', '');

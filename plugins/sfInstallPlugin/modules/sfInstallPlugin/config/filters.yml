@@ -6,6 +6,9 @@ security: ~
 settings:
   enabled: false
 
+binder:
+  enabled: false
+
 QubitLimitIp:
   enabled: false
 

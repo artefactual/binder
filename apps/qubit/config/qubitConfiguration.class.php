@@ -133,9 +133,6 @@ EOF
 
   protected function bootstrapDrmc()
   {
-    $databaseManager = new sfDatabaseManager($this);
-    $conn = $databaseManager->getDatabase('propel')->getConnection();
-
     // Load Storage Service configuration from environment or defaults
     $ssConfig = array();
     $ssEnvVars = array(
@@ -169,131 +166,14 @@ EOF
     {
       $envDrmcTmsUrl = 'http://tms.example.org/TMSAPI/TmsObjectSvc/TmsObjects.svc';
     }
+
     $envDrmcTmsUrl = filter_var($envDrmcTmsUrl, FILTER_VALIDATE_URL);
+
     if (false === $envDrmcTmsUrl)
     {
       throw new sfException('ATOM_DRMC_TMS_URL doesn\'t seem to be a valid URL');
     }
+
     sfConfig::set('app_drmc_tms_url', $envDrmcTmsUrl);
-
-    /**
-     * Adding configuration to sfConfig (caching)
-     */
-    try
-    {
-      $cache = QubitCache::getInstance();
-    }
-    catch (Exception $e)
-    {
-
-    }
-
-    $cacheKey = 'config_drmc';
-
-    // Hit the cache if config_drmc is available
-    if (isset($cache) && $cache->has($cacheKey))
-    {
-      $cacheableParams = unserialize($cache->get($cacheKey));
-    }
-    else
-    {
-      $cachableParams = array();
-
-      // Levels of descriptions
-      $criteria = new Criteria;
-      $criteria->add(QubitTerm::TAXONOMY_ID, QubitTaxonomy::LEVEL_OF_DESCRIPTION_ID);
-      foreach (QubitTerm::get($criteria) as $item)
-      {
-        $slug = str_replace('-', '_', QubitSlug::slugify($item->getName(array('culture' => 'en'))));
-        if (1 > strlen($slug))
-        {
-          continue;
-        }
-        $configurationId = 'app_drmc_lod_'.$slug.'_id';
-
-        $cacheableParams[$configurationId] = $item->id;
-      }
-
-      // Taxonomies
-      $taxonomies = array(
-        'Classifications',
-        'Departments',
-        'Component types',
-        'Supporting technologies relation types',
-        'Associative relationship types',
-        'Saved query types');
-
-      foreach ($taxonomies as $name)
-      {
-        $criteria = new Criteria;
-        $criteria->addJoin(QubitTaxonomy::ID, QubitTaxonomyI18n::ID);
-        $criteria->add(QubitTaxonomyI18n::CULTURE, 'en');
-        $criteria->add(QubitTaxonomyI18n::NAME, $name);
-
-        if (null !== $taxonomy = QubitTaxonomy::getOne($criteria))
-        {
-          $slug = str_replace('-', '_', QubitSlug::slugify($taxonomy->getName(array('culture' => 'en'))));
-          if (1 > strlen($slug))
-          {
-            continue;
-          }
-          $configurationId = 'app_drmc_taxonomy_'.$slug.'_id';
-
-          $cacheableParams[$configurationId] = $taxonomy->id;
-        }
-      }
-
-      // Terms
-      $terms = array(
-        QubitTaxonomy::NOTE_TYPE_ID => array(
-          'InstallComments',
-          'PrepComments',
-          'StorageComments'
-        ),
-        QubitTaxonomy::RELATION_TYPE_ID => array(
-          'Supporting technology relation types'
-        ),
-        $cacheableParams['app_drmc_taxonomy_saved_query_types_id'] => array(
-          'Search',
-          'Report'
-        )
-      );
-
-      foreach ($terms as $taxonomyId => $names)
-      {
-        foreach ($names as $name)
-        {
-          $criteria = new Criteria;
-          $criteria->add(QubitTerm::TAXONOMY_ID, $taxonomyId);
-          $criteria->addJoin(QubitTerm::ID, QubitTermI18n::ID);
-          $criteria->add(QubitTermI18n::CULTURE, 'en');
-          $criteria->add(QubitTermI18n::NAME, $name);
-
-          if (null !== $term = QubitTerm::getOne($criteria))
-          {
-            $slug = str_replace('-', '_', QubitSlug::slugify($term->getName(array('culture' => 'en'))));
-            if (1 > strlen($slug))
-            {
-              continue;
-            }
-            $configurationId = 'app_drmc_term_'.$slug.'_id';
-
-            $cacheableParams[$configurationId] = $term->id;
-          }
-        }
-      }
-
-      // Cache
-      if (isset($cache))
-      {
-        $cache->set($cacheKey, serialize($cacheableParams));
-      }
-    }
-
-    // Dump $cacheableParams in sfConfig
-    foreach ($cacheableParams as $key => $value)
-    {
-      sfConfig::set($key, $value);
-    }
   }
 }

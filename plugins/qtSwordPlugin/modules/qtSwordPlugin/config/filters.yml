@@ -8,6 +8,7 @@ history: ~
 rendering: ~
 security: ~
 settings: ~
+binder: ~
 QubitLimitIp: ~
 QubitSslRequirement: ~
 QubitMeta: ~

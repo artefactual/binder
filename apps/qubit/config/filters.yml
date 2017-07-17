@@ -13,6 +13,9 @@ security: ~
 settings:
   class: QubitSettingsFilter
 
+binder:
+  class: QubitBinderFilter
+
 QubitLimitIp:
   class: QubitLimitIpFilter
 

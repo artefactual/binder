@@ -50,6 +50,12 @@ EOF;
     $this->addTaxonomies();
     $this->addTerms();
     $this->addSavedQueryTypes();
+
+    $cache = QubitCache::getInstance();
+    if (isset($cache) && $cache->has('drmc_config'))
+    {
+      $cache->remove('drmc_config');
+    }
   }
 
   protected function addLevelsOfDescriptions()
@@ -297,5 +303,96 @@ EOF;
         $term->save();
       }
     }
+  }
+
+  public static function getDrmcConfigArray()
+  {
+    $config = array();
+
+    // Levels of descriptions
+    $criteria = new Criteria;
+    $criteria->add(QubitTerm::TAXONOMY_ID, QubitTaxonomy::LEVEL_OF_DESCRIPTION_ID);
+    foreach (QubitTerm::get($criteria) as $item)
+    {
+      $slug = str_replace('-', '_', QubitSlug::slugify($item->getName(array('culture' => 'en'))));
+      if (1 > strlen($slug))
+      {
+        continue;
+      }
+      $configurationId = 'app_drmc_lod_'.$slug.'_id';
+
+      $config[$configurationId] = $item->id;
+    }
+
+    // Taxonomies
+    $taxonomies = array(
+      'Classifications',
+      'Departments',
+      'Component types',
+      'Supporting technologies relation types',
+      'Associative relationship types',
+      'Saved query types');
+
+    foreach ($taxonomies as $name)
+    {
+      $criteria = new Criteria;
+      $criteria->addJoin(QubitTaxonomy::ID, QubitTaxonomyI18n::ID);
+      $criteria->add(QubitTaxonomyI18n::CULTURE, 'en');
+      $criteria->add(QubitTaxonomyI18n::NAME, $name);
+
+      if (null !== $taxonomy = QubitTaxonomy::getOne($criteria))
+      {
+        $slug = str_replace('-', '_', QubitSlug::slugify($taxonomy->getName(array('culture' => 'en'))));
+        if (1 > strlen($slug))
+        {
+          continue;
+        }
+        $configurationId = 'app_drmc_taxonomy_'.$slug.'_id';
+
+        $config[$configurationId] = $taxonomy->id;
+      }
+    }
+
+    // Terms
+    $terms = array(
+      QubitTaxonomy::NOTE_TYPE_ID => array(
+        'InstallComments',
+        'PrepComments',
+        'StorageComments'
+      ),
+      QubitTaxonomy::RELATION_TYPE_ID => array(
+        'Supporting technology relation types'
+      ),
+      $config['app_drmc_taxonomy_saved_query_types_id'] => array(
+        'Search',
+        'Report'
+      )
+    );
+
+    foreach ($terms as $taxonomyId => $names)
+    {
+      foreach ($names as $name)
+      {
+        $criteria = new Criteria;
+        $criteria->add(QubitTerm::TAXONOMY_ID, $taxonomyId);
+        $criteria->addJoin(QubitTerm::ID, QubitTermI18n::ID);
+        $criteria->add(QubitTermI18n::CULTURE, 'en');
+        $criteria->add(QubitTermI18n::NAME, $name);
+
+        if (null !== $term = QubitTerm::getOne($criteria))
+        {
+          $slug = str_replace('-', '_', QubitSlug::slugify($term->getName(array('culture' => 'en'))));
+          if (1 > strlen($slug))
+          {
+            continue;
+          }
+          $configurationId = 'app_drmc_term_'.$slug.'_id';
+
+          $config[$configurationId] = $term->id;
+        }
+      }
+    }
+
+    return $config;
   }
 }

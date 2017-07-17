@@ -11,6 +11,7 @@ security:
   class: arRestApiPluginBasicSecurityFilter
 
 settings: ~
+binder: ~
 QubitLimitIp: ~
 QubitSslRequirement: ~
 QubitMeta: ~
