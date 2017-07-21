@@ -1,0 +1,83 @@
+#! /usr/bin/env node
+/*
+
+Populate mock AIP server with data
+
+Examples:
+  ./populate_sample_data        # defaults to base URL of http://127.0.0.1:2403/
+  ./populate_sample_data 2404   # specify port only: ends up http://127.0.0.1:2404/
+  ./populate_sample_data http://192.168.1.75:2403
+
+*/
+
+var fs = require('fs'),
+    uuid = require('node-uuid'),
+    request = require('request'),
+    url,
+    serverSpec;
+
+// determine URL base from optional CLI arg
+if (process.argv.length > 2) {
+
+  serverSpec = process.argv[process.argv.length-1];
+
+  // check for numerical value
+  if (parseInt(serverSpec, 10) > 0) {
+
+    // treat CLI arg as local port number
+    urlBase = 'http://127.0.0.1:' + serverSpec + '/';
+  } else {
+    // try CLI arg as URL base
+    urlBase = serverSpec + '/';
+  }
+} else {
+  // default URL base
+  urlBase = 'http://127.0.0.1:2403/';
+}
+
+function postDataToEndpoint(endpointURL, data) {
+  data.forEach(function (item) {
+    // generate UUID if not present
+    if (typeof item['uuid'] == 'undefined') {
+      item['uuid'] = uuid.v4();
+    }
+
+    // remove system IDs if present in data
+    if (typeof item['id'] != 'undefined') {
+      delete item['id'];
+    }
+
+    // POST to API
+    request.post(endpointURL, {form: item}, function (error, response, body) {  
+      if (!error) {
+        created_item = JSON.parse(body);
+        console.log('  Created resource ' + created_item.id + '.');
+      } else {
+        console.log('Error sending data.');
+        process.exit();
+      }
+    });
+  });
+}
+
+var populateConfig = {
+  "resources": [{
+    "sampleData": __dirname + '/sample_data/aips.json',
+    "URL": urlBase + 'aips-raw'
+  },
+  {
+    "sampleData": __dirname + '/sample_data/tms_objects.json',
+    "URL": urlBase + 'tms-raw'
+  },
+  {
+    "sampleData": __dirname + '/sample_data/tms_components.json',
+    "URL": urlBase + 'tms-component-raw'
+  }]
+};
+
+populateConfig.resources.forEach(function(resource) {
+  // load sample data
+  var items = JSON.parse(fs.readFileSync(resource.sampleData));
+  console.log('Attempting to post sample data to ' + resource.URL);
+  postDataToEndpoint(resource.URL, items);
+});

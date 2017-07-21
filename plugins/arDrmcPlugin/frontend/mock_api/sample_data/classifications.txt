@@ -1,0 +1,5 @@
+1,Artwork component
+2,Artwork material
+3,Supporting documentation
+4,Supporting technology
+5,Unclassified

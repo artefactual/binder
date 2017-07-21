@@ -1,0 +1,101 @@
+{
+	"type": "Collection",
+	"properties": {
+		"uuid": {
+			"name": "uuid",
+			"type": "string",
+			"typeLabel": "string",
+			"required": false,
+			"id": "uuid",
+			"order": 0
+		},
+		"name": {
+			"name": "name",
+			"type": "string",
+			"typeLabel": "string",
+			"required": false,
+			"id": "name",
+			"order": 1
+		},
+		"description": {
+			"name": "description",
+			"type": "string",
+			"typeLabel": "string",
+			"required": false,
+			"id": "description",
+			"order": 2
+		},
+		"class": {
+			"name": "class",
+			"type": "string",
+			"typeLabel": "string",
+			"required": false,
+			"id": "class",
+			"order": 3
+		},
+		"classid": {
+			"name": "classid",
+			"type": "string",
+			"typeLabel": "string",
+			"required": false,
+			"id": "classid",
+			"order": 4
+		},
+		"size": {
+			"name": "size",
+			"type": "number",
+			"typeLabel": "number",
+			"required": false,
+			"id": "size",
+			"order": 5
+		},
+		"objectquantity": {
+			"name": "objectquantity",
+			"type": "number",
+			"typeLabel": "number",
+			"required": false,
+			"id": "objectquantity",
+			"order": 6
+		},
+		"createdat": {
+			"name": "createdat",
+			"type": "string",
+			"typeLabel": "string",
+			"required": false,
+			"id": "createdat",
+			"order": 7
+		},
+		"subdirectoryquantity": {
+			"name": "subdirectoryquantity",
+			"type": "number",
+			"typeLabel": "number",
+			"required": false,
+			"id": "subdirectoryquantity",
+			"order": 8
+		},
+		"objects": {
+			"name": "objects",
+			"type": "string",
+			"typeLabel": "string",
+			"required": false,
+			"id": "objects",
+			"order": 9
+		},
+		"parent": {
+			"name": "parent",
+			"type": "string",
+			"typeLabel": "string",
+			"required": false,
+			"id": "parent",
+			"order": 10
+		},
+		"partof": {
+			"name": "partof",
+			"type": "string",
+			"typeLabel": "string",
+			"required": false,
+			"id": "partof",
+			"order": 11
+		}
+	}
+}

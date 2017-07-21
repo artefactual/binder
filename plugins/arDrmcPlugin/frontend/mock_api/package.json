@@ -1,0 +1,14 @@
+{
+  "name": "mock_api",
+  "version": "0.0.0",
+  "description": "Mock APIs for development",
+  "main": "index.js",
+  "dependencies": {
+    "deployd": "0.6.10",
+    "dpd-event": "~0.0.2",
+    "dpd-event-extension": "0.0.3",
+    "request": "~2.33.0",
+    "node-uuid": "~1.4.1",
+    "casual": "1.3.3"
+  }
+}
