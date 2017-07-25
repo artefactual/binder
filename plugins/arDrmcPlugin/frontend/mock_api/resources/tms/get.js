@@ -22,8 +22,15 @@ var objectDetailRequestHandler = function() {
     tmsObjects.forEach(function(tmsObject) {
       results.push(tmsObject);
     });
+
+    // Manually add random Thumbnail. Tried several fixes but
+    // this field and others get lost while saving to MongoDB
+    var result = results[0];
+    result.Thumbnail = 'https://unsplash.it/125?random';
+    result.FullImage = 'https://unsplash.it/250?random';
+
     setResult({
-      'GetTombstoneDataRestIdResult': results[0]
+      'GetTombstoneDataRestIdResult': result
     });
   });
 };
