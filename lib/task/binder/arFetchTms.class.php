@@ -30,7 +30,9 @@ class arFetchTms
     $statusMapping,
     $componentLevels,
     $logger,
-    $searchInstance;
+    $searchInstance,
+    $componentRelations,
+    $componentNumbersMapping;
 
   public function __construct()
   {
@@ -54,6 +56,15 @@ class arFetchTms
     $this->logger = sfContext::getInstance()->getLogger();
 
     $this->searchInstance = QubitSearch::getInstance();
+
+    // Save component relations data from attributes to
+    // be processed after all components are imported
+    $this->componentRelations = array();
+
+    // Create a mapping between IO ids and ComponentNumbers
+    // to avoid hiting the database to get the IO id when
+    // the relations are processed
+    $this->componentNumbersMapping = array();
   }
 
   protected function getTmsData($path)
@@ -280,6 +291,9 @@ class arFetchTms
         $property->delete();
       }
 
+      $relations = array();
+      $componentNumber = null;
+
       foreach ($data as $name => $value)
       {
         if (empty($value))
@@ -292,6 +306,12 @@ class arFetchTms
           case 'Attributes':
             foreach (json_decode($value, true) as $item)
             {
+              if (!empty($item['Relation']))
+              {
+                // Save relation attributes for later
+                $relations[] = $item;
+              }
+
               // Level of description from status attribute
               if (!empty($item['Status']) && isset($this->statusMapping[$item['Status']]))
               {
@@ -354,8 +374,13 @@ class arFetchTms
 
           // Properties
           case 'CompCount':
+            $this->addOrUpdateProperty($name, $value, $tmsComponent);
+
+            break;
+
           case 'ComponentNumber':
             $this->addOrUpdateProperty($name, $value, $tmsComponent);
+            $componentNumber = $value;
 
             break;
 
@@ -423,6 +448,16 @@ class arFetchTms
 
     $tmsComponent->save();
 
+    if (count($relations))
+    {
+      $this->componentRelations[$tmsComponent->id] = $relations;
+    }
+
+    if (isset($componentNumber))
+    {
+      $this->componentNumbersMapping[$componentNumber] = $tmsComponent->id;
+    }
+
     return $tmsComponent->id;
   }
 
@@ -440,6 +475,59 @@ class arFetchTms
     }
 
     return null;
+  }
+
+  public function processComponentRelations($ioIds)
+  {
+    $taxonomyId = sfConfig::get('app_drmc_taxonomy_associative_relationship_types_id');
+
+    // Loop over the final components
+    foreach ($ioIds as $ioId)
+    {
+      // Remove existing relations
+      $criteria = new Criteria;
+      $criteria->addJoin(QubitRelation::TYPE_ID, QubitTerm::ID);
+      $criteria->add(QubitRelation::SUBJECT_ID, $ioId);
+      $criteria->add(QubitTerm::TAXONOMY_ID, $taxonomyId);
+
+      foreach (QubitRelation::get($criteria) as $relation)
+      {
+        $relation->indexSubjectOnDelete = false;
+        $relation->indexObjectOnDelete = false;
+        $relation->delete();
+      }
+
+      // Ignore components without relations data
+      if (!isset($this->componentRelations[$ioId]))
+      {
+        continue;
+      }
+
+      foreach ($this->componentRelations[$ioId] as $relationData)
+      {
+        // Ignore relations without type, relations to external resources
+        // and relations to components outside this artwork
+        if (!isset($relationData['Relation']) || !isset($relationData['Remarks']) ||
+            !isset($this->componentNumbersMapping[$relationData['Remarks']]))
+        {
+          continue;
+        }
+
+        $relatedComponentId = $this->componentNumbersMapping[$relationData['Remarks']];
+
+        // Get or create relation type term
+        $termName = trim($relationData['Relation']);
+        $relationType = QubitFlatfileImport::createOrFetchTerm($taxonomyId, $termName);
+
+        // Create relation
+        $relation = new QubitRelation;
+        $relation->type = $relationType;
+        $relation->objectId = $relatedComponentId;
+        $relation->subjectId = $ioId;
+        $relation->indexOnSave = false;
+        $relation->save();
+      }
+    }
   }
 
   public function updateArtwork($artwork)
@@ -494,6 +582,9 @@ class arFetchTms
       // Update TMS Component data
       $tmsComponentsIoIds[] = $this->getTmsComponentData($tmsComponent, $tmsId, $artworkThumbnail);
     }
+
+    // Update relations between components
+    $this->processComponentRelations($tmsComponentsIoIds);
 
     // Save info object components ids as property of the artwork
     // because they are not directly related but added as part of the artwork in ES

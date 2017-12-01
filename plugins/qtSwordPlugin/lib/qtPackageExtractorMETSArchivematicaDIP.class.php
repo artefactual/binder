@@ -346,6 +346,9 @@ class qtPackageExtractorMETSArchivematicaDIP extends qtPackageExtractorBase
           $tmsComponentsIoIds[] = $fetchTms->getTmsComponentData($tmsComponent, $tmsId, $artworkThumbnail);
         }
 
+        // Create relations between components
+        $fetchTms->processComponentRelations($tmsComponentsIoIds);
+
         // Save info object components ids as property of the artwork
         // because they are not directly related but added as part of the artwork in ES
         QubitProperty::addUnique($tmsObject->id, 'childComponents', serialize($tmsComponentsIoIds), array('indexOnSave' => false));
