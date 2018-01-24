@@ -32,7 +32,7 @@ class arDrmcMetsToDatabaseTask extends sfBaseTask
       new sfCommandOption('application', null, sfCommandOption::PARAMETER_OPTIONAL, 'The application name', 'qubit'),
       new sfCommandOption('env', null, sfCommandOption::PARAMETER_REQUIRED, 'The environment', 'cli')));
 
-    $this->namespace = 'drmc';
+    $this->namespace = 'binder';
     $this->name = 'mets2db';
 
     $this->briefDescription = 'Parse and add METS metadata to the database';
