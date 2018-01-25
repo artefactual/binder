@@ -21,6 +21,8 @@
         scope.$watch('file', function (value) {
           InformationObjectService.getMets(value.id).then(function (response) {
             scope.mets = response.data;
+          }, function () {
+            scope.mets = [];
           });
           if (angular.isDefined(value.media_type_id)) {
             var mt = ModalDigitalObjectViewerService.mediaTypes[value.media_type_id];
