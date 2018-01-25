@@ -133,17 +133,18 @@ EOF
 
   protected function bootstrapDrmc()
   {
-    // Load Storage Service configuration from environment or defaults
-    $ssConfig = array();
-    $ssEnvVars = array(
+    // Load Storage Service and TMS configuration from environment or defaults
+    $config = array();
+    $envVars = array(
       'ARCHIVEMATICA_SS_HOST' => '127.0.0.1',
       'ARCHIVEMATICA_SS_PORT' => '8000',
       'ARCHIVEMATICA_SS_PIPELINE_UUID' => false,
       'ARCHIVEMATICA_SS_USER' => false,
-      'ARCHIVEMATICA_SS_API_KEY' => false
+      'ARCHIVEMATICA_SS_API_KEY' => false,
+      'ATOM_DRMC_TMS_URL' => false
     );
 
-    foreach ($ssEnvVars as $var => $default)
+    foreach ($envVars as $var => $default)
     {
       $value = getenv($var);
 
@@ -152,28 +153,14 @@ EOF
         throw new sfException($var . ' not configured', 500);
       }
 
-      $ssConfig[$var] = ($value) ? $value : $default;
+      $config[$var] = ($value) ? $value : $default;
     }
 
-    sfConfig::set('app_drmc_ss_host', $ssConfig['ARCHIVEMATICA_SS_HOST']);
-    sfConfig::set('app_drmc_ss_port', $ssConfig['ARCHIVEMATICA_SS_PORT']);
-    sfConfig::set('app_drmc_ss_pipeline_uuid', $ssConfig['ARCHIVEMATICA_SS_PIPELINE_UUID']);
-    sfConfig::set('app_drmc_ss_user', $ssConfig['ARCHIVEMATICA_SS_USER']);
-    sfConfig::set('app_drmc_ss_api_key', $ssConfig['ARCHIVEMATICA_SS_API_KEY']);
-
-    // Load env ATOM_DRMC_TMS_URL, defaults to "http://tms.example.org/TMSAPI/TmsObjectSvc/TmsObjects.svc"
-    if (false === $envDrmcTmsUrl = getenv('ATOM_DRMC_TMS_URL'))
-    {
-      $envDrmcTmsUrl = 'http://tms.example.org/TMSAPI/TmsObjectSvc/TmsObjects.svc';
-    }
-
-    $envDrmcTmsUrl = filter_var($envDrmcTmsUrl, FILTER_VALIDATE_URL);
-
-    if (false === $envDrmcTmsUrl)
-    {
-      throw new sfException('ATOM_DRMC_TMS_URL doesn\'t seem to be a valid URL');
-    }
-
-    sfConfig::set('app_drmc_tms_url', $envDrmcTmsUrl);
+    sfConfig::set('app_drmc_ss_host', $config['ARCHIVEMATICA_SS_HOST']);
+    sfConfig::set('app_drmc_ss_port', $config['ARCHIVEMATICA_SS_PORT']);
+    sfConfig::set('app_drmc_ss_pipeline_uuid', $config['ARCHIVEMATICA_SS_PIPELINE_UUID']);
+    sfConfig::set('app_drmc_ss_user', $config['ARCHIVEMATICA_SS_USER']);
+    sfConfig::set('app_drmc_ss_api_key', $config['ARCHIVEMATICA_SS_API_KEY']);
+    sfConfig::set('app_drmc_tms_url', $config['ATOM_DRMC_TMS_URL']);
   }
 }
