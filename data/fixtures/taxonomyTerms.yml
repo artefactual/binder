@@ -941,6 +941,12 @@ QubitTaxonomy:
       pt_BR: 'Tipos de AIP'
       sl: 'AIP vrsta'
       vi: 'Loại AIP'
+  QubitTaxonomy_access_log_entry_types:
+    source_culture: en
+    id: 72
+    parent_id: QubitTaxonomy_root
+    name:
+      en: 'Access log entry types'
   QubitTaxonomy_thematic_areas:
     source_culture: en
     id: 72
@@ -2695,6 +2701,24 @@ QubitTerm:
       pt_BR: 'Tecnologia de apoio'
       sl: 'Podporna tehnologija'
       vi: 'Công nghệ hỗ trợ'
+  QubitTerm_access_log_standard_entry:
+    taxonomy_id: 72
+    id: 358
+    source_culture: en
+    name:
+      en: 'Access'
+  QubitTerm_access_log_aip_download_entry:
+    taxonomy_id: 72
+    id: 359
+    source_culture: en
+    name:
+      en: 'AIP download'
+  QubitTerm_access_log_aip_file_download_entry:
+    taxonomy_id: 72
+    id: 360
+    source_culture: en
+    name:
+      en: 'AIP file download'
   QubitTerm_actor_relationship_is_the_superior_of:
     taxonomy_id: QubitTaxonomy_actor_relation_type
     parent_id: QubitTerm_actor_relationship_hierarchical
