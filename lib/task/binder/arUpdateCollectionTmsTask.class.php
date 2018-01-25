@@ -48,6 +48,7 @@ EOF;
   protected function execute($arguments = array(), $options = array())
   {
     sfContext::createInstance($this->configuration);
+    sfConfig::add(arDrmcBootstrapTask::getDrmcConfigArray());
 
     // Overall timer
     $timer = new QubitTimer;

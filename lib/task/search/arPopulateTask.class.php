@@ -48,6 +48,9 @@ EOF;
 
     new sfDatabaseManager($this->configuration);
 
+    sfConfig::add(QubitSetting::getSettingsArray());
+    sfConfig::add(arDrmcBootstrapTask::getDrmcConfigArray());
+
     QubitSearch::getInstance()->populate();
   }
 }
