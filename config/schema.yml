@@ -275,7 +275,7 @@ propel:
     filename: varchar(1024)
     last_modified: timestamp
     date_ingested: bu_date
-    size: integer
+    size: bigint
     mime_type: varchar(255)
     created_at:
     updated_at:

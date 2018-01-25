@@ -878,7 +878,7 @@ CREATE TABLE `premis_object`
 	`filename` VARCHAR(1024),
 	`last_modified` DATETIME,
 	`date_ingested` DATE,
-	`size` INTEGER,
+	`size` BIGINT,
 	`mime_type` VARCHAR(255),
 	`created_at` DATETIME  NOT NULL,
 	`updated_at` DATETIME  NOT NULL,
