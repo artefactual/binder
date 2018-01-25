@@ -2,18 +2,18 @@
 
   'use strict';
 
-  angular.module('drmc.controllers').controller('TmsBrowserCtrl', function ($scope, $http) {
+  angular.module('drmc.controllers').controller('TmsBrowserCtrl', function ($scope, $http, SETTINGS) {
 
     $scope.submitted = false;
 
     var endpoints = {
       'ObjectID': {
-        url: 'http://tms.example.org/tms/TMSAPI/TmsObjectSvc/TmsObjects.svc/GetTombstoneDataRest/ObjectID/',
+        url: SETTINGS.drmc.tms_url + '/GetTombstoneDataRest/ObjectID/',
         group: 'GetTombstoneDataRestIdResult',
         regex: /^[0-9]+$/
       },
       'AccessionNo': {
-        url: 'http://tms.example.org/tms/TMSAPI/TmsObjectSvc/TmsObjects.svc/GetTombstoneDataRest/Object/',
+        url: SETTINGS.drmc.tms_url + '/GetTombstoneDataRest/Object/',
         group: 'GetTombstoneDataRestResult'
       }
     };
