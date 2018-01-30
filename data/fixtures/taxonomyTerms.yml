@@ -2654,18 +2654,21 @@ QubitTerm:
       vi: 'Công nghệ hỗ trợ'
   QubitTerm_access_log_standard_entry:
     taxonomy_id: 72
+    parent_id: QubitTerm_110
     id: 358
     source_culture: en
     name:
       en: 'Access'
   QubitTerm_access_log_aip_download_entry:
     taxonomy_id: 72
+    parent_id: QubitTerm_110
     id: 359
     source_culture: en
     name:
       en: 'AIP download'
   QubitTerm_access_log_aip_file_download_entry:
     taxonomy_id: 72
+    parent_id: QubitTerm_110
     id: 360
     source_culture: en
     name:
