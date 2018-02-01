@@ -3,43 +3,19 @@
 <header id="top-bar">
 
   <h1 id="site-name">
-    <?php echo link_to('<span>Binder</span>', '@homepage', array('id' => 'logo', 'rel' => 'home', 'title' => __('Home'))) ?>
+    <?php echo link_to(__('Binder'), '@homepage', array('rel' => 'home', 'title' => __('Home'))) ?>
   </h1>
 
   <nav>
 
     <?php echo get_component('menu', 'userMenu') ?>
 
-    <?php echo get_component('menu', 'quickLinksMenu') ?>
-
-    <?php echo get_component('menu', 'changeLanguageMenu') ?>
-
-    <?php echo get_component('menu', 'mainMenu', array('sf_cache_key' => $sf_user->getCulture().$sf_user->getUserID())) ?>
+    <div id="home-link" class="top-menu-link" data-toggle="tooltip" data-title="<?php echo __('Home') ?>">
+      <?php echo link_to(__('Home'), '@homepage', array('class' => 'top-item', 'title' => __('Home'))) ?>
+    </div>
 
   </nav>
 
-  <div id="search-bar">
-
-    <?php echo get_component('search', 'box') ?>
-
-    <?php echo get_component('menu', 'browseMenu', array('sf_cache_key' => $sf_user->getCulture().$sf_user->getUserID())) ?>
-
-  </div>
-
   </section>
 
-  <?php echo get_component_slot('header') ?>
-
 </header>
-
-<?php if (sfConfig::get('app_toggleDescription')): ?>
-  <div id="site-slogan">
-    <div class="container">
-      <div class="row">
-        <div class="span12">
-          <span><?php echo sfConfig::get('app_siteDescription') ?></span>
-        </div>
-      </div>
-    </div>
-  </div>
-<?php endif; ?>
