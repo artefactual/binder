@@ -281,10 +281,8 @@ function check_field_visibility($fieldName)
   return (is_using_cli() || sfContext::getInstance()->user->isAuthenticated()) || sfConfig::get($fieldName, false);
 }
 
-function get_search_i18n($hit, $fieldName, $options = array())
+function get_search_i18n($hit, $fieldName, $cultureFallback = true, $allowEmpty = true)
 {
-  $userCulture = sfContext::getInstance()->user->getCulture();
-
   if ($hit instanceof \Elastica\Result)
   {
     $hit = $hit->getData();
@@ -292,22 +290,16 @@ function get_search_i18n($hit, $fieldName, $options = array())
 
   $value = null;
 
-  if (isset($options['culture']) && isset($hit['i18n'][$options['culture']][$fieldName]))
+  if (isset($hit['i18n'][sfContext::getInstance()->user->getCulture()][$fieldName]))
   {
-    $value = $hit['i18n'][$options['culture']][$fieldName];
+    $value = $hit['i18n'][sfContext::getInstance()->user->getCulture()][$fieldName];
   }
-  else if (isset($hit['i18n'][$userCulture][$fieldName]))
-  {
-    $value = $hit['i18n'][$userCulture][$fieldName];
-  }
-  else if ((!isset($options['cultureFallback']) || $options['cultureFallback'])
-    && isset($hit['i18n'][$hit['sourceCulture']][$fieldName]))
+  else if ($cultureFallback && isset($hit['i18n'][$hit['sourceCulture']][$fieldName]))
   {
     $value = $hit['i18n'][$hit['sourceCulture']][$fieldName];
   }
 
-  if (($value == null || $value == '')
-    && isset($options['allowEmpty']) && !$options['allowEmpty'])
+  if (!$allowEmpty && ($value == null || $value == ''))
   {
     $value = sfContext::getInstance()->i18n->__('Untitled');
   }
@@ -315,15 +307,14 @@ function get_search_i18n($hit, $fieldName, $options = array())
   return $value;
 }
 
-function get_search_i18n_highlight(\Elastica\Result $hit, $fieldName, $options = array())
+function get_search_i18n_highlight(\Elastica\Result $hit, $field, $options = array())
 {
-  if (!isset($options['culture']))
-  {
-    $options['culture'] = sfContext::getInstance()->user->getCulture();
-  }
-
   $highlights = $hit->getHighlights();
-  $field = 'i18n.'.$options['culture'].'.'.$fieldName;
+
+  if (!isset($options['notI18n']) || $options['notI18n'] === false)
+  {
+    $field = 'i18n.'.sfContext::getInstance()->user->getCulture().'.'.$field;
+  }
 
   if (isset($highlights[$field]))
   {
@@ -331,13 +322,8 @@ function get_search_i18n_highlight(\Elastica\Result $hit, $fieldName, $options =
   }
 }
 
-function get_search_creation_details($hit, $culture = null)
+function get_search_creation_details($hit)
 {
-  if (!isset($culture))
-  {
-    $culture = sfContext::getInstance()->user->getCulture();
-  }
-
   if ($hit instanceof \Elastica\Result)
   {
     $hit = $hit->getData();
@@ -350,7 +336,7 @@ function get_search_creation_details($hit, $culture = null)
   {
     $creator = array_pop($hit['creators']);
 
-    $details[] = get_search_i18n($creator, 'authorizedFormOfName', true, true, $culture);
+    $details[] = get_search_i18n($creator, 'authorizedFormOfName');
   }
 
   // WIP, we are not showing labels for now. See #5202.
@@ -408,9 +394,9 @@ function get_search_autocomplete_string($hit)
   }
 
   if ('1' == sfConfig::get('app_inherit_code_informationobject', 1)
-    && isset($hit['referenceCode']) && !empty($hit['referenceCode']))
+    && isset($hit['inheritReferenceCode']) && !empty($hit['inheritReferenceCode']))
   {
-    $levelOfDescriptionAndIdentifier[] = $hit['referenceCode'];
+    $levelOfDescriptionAndIdentifier[] = $hit['inheritReferenceCode'];
   }
   elseif (isset($hit['identifier']) && !empty($hit['identifier']))
   {
