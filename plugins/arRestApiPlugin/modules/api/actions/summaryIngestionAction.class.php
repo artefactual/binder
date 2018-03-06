@@ -26,24 +26,23 @@ class ApiSummaryIngestionAction extends QubitApiAction
 
   protected function getResults()
   {
-    // Create query objects
     $query = new \Elastica\Query;
-    $queryBool = new \Elastica\Query\BoolQuery;
-    $queryBool->addMust(new \Elastica\Query\MatchAll);
+    $query->setQuery(new \Elastica\Query\MatchAll);
 
-    // Assign query
-    $query->setQuery($queryBool);
+    // We don't need details, just aggregation results
+    $query->setSize(0);
 
-    // We don't need details, just facet results
-    $query->setLimit(0);
+    // Add aggregation to the query to get total level of description types
+    $query->addAggregation($this->buildEsAgg('Terms', 'level', 'levelOfDescriptionId'));
 
-    // Add facets to the query to get total level of description types
-    $this->facetEsQuery('Terms', 'levelOfDescriptionId', 'levelOfDescriptionId', $query);
-
-    $resultSet = QubitSearch::getInstance()->index->getType('QubitInformationObject')->search($query);
-
-    // Derive level of description type count from facets
-    $counts = array();
+    try
+    {
+      $resultSet = QubitSearch::getInstance()->index->getType('QubitInformationObject')->search($query);
+    }
+    catch (Exception $e)
+    {
+      return array();
+    }
 
     $levelOfDescriptionInfo = array(
       sfConfig::get('app_drmc_lod_artwork_record_id')               => 'Artwork',
@@ -51,20 +50,21 @@ class ApiSummaryIngestionAction extends QubitApiAction
       sfConfig::get('app_drmc_lod_component_id')                    => 'Component'
     );
 
-    $facets = $resultSet->getFacets();
+    $agg = $resultSet->getAggregation('level');
+    $results = array();
 
-    foreach ($facets['levelOfDescriptionId']['terms'] as $term)
+    foreach ($agg['buckets'] as $bucket)
     {
-      $termId = $term['term'];
+      $termId = $bucket['key'];
       if (isset($levelOfDescriptionInfo[$termId]))
       {
-        $counts[] = array(
-          'total' => $term['count'],
+        $results[] = array(
+          'total' => $bucket['doc_count'],
           'type' => $levelOfDescriptionInfo[$termId]
         );
       }
     }
 
-    return $counts;
+    return $results;
   }
 }

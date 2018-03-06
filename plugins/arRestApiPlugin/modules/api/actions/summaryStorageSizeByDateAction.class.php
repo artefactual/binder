@@ -26,17 +26,48 @@ class ApiSummaryStorageSizeByDateAction extends QubitApiAction
 
   protected function getResults()
   {
-    // Create query object
     $query = new \Elastica\Query;
     $query->setQuery(new \Elastica\Query\MatchAll);
 
-    // We don't need details, just facet results
-    $query->setLimit(0);
+    // We don't need details, just aggregation results
+    $query->setSize(0);
 
-    // Add facets to the months in which artwork records were collected and created
-    $this->facetEsQuery('DateHistogram', 'storageSize', 'createdAt', $query, array('interval' => 'month', 'valueField' => 'sizeOnDisk'));
+    // Add aggregation to show sum and totals of size
+    // by month based on creation date
+    $now = round(microtime(true) * 1000);
+    $aggOptions = array(
+      'interval' => 'month',
+      'params' => array(
+        array(
+          'name' => 'extended_bounds',
+          'value' => array( 'min' => $now, 'max' => $now)
+        ),
+        array(
+          'name' => 'format',
+          'value' => 'yyyy-MM'
+        )
+      )
+    );
+    $agg = $this->buildEsAgg('DateHistogram', 'storageSize', 'createdAt', $aggOptions);
+    $agg->addAggregation($this->buildEsAgg('Sum', 'size', 'sizeOnDisk'));
+    $query->addAggregation($agg);
 
-    // Return empty results if search fails
+    // Cumulative sum aggregation to calculate running totals.
+    // Elastica doesn't include a CumulativeSum aggregation,
+    // therefore we modify the raw query adding the nested aggs.
+    $cumulativeAgg = array(
+      'total' => array(
+        'cumulative_sum' => array(
+          'buckets_path' => 'size'
+        )
+      )
+    );
+
+    $rawQuery = $query->toArray();
+    $rawQuery['aggs']['storageSize']['aggs'] = array_merge($rawQuery['aggs']['storageSize']['aggs'], $cumulativeAgg);
+
+    $query->setRawQuery($rawQuery);
+
     try
     {
       $resultSet = QubitSearch::getInstance()->index->getType('QubitAip')->search($query);
@@ -46,87 +77,18 @@ class ApiSummaryStorageSizeByDateAction extends QubitApiAction
       return array();
     }
 
-    $facets = $resultSet->getFacets();
-
-    // Convert timestamps and calculate running total.
-    // Add missing intervals: ElasticSearch 0.9 facets
-    // don't include intervals without data, it can be solved
-    // using aggregations in Elasticsearch 1.x.
+    $agg = $resultSet->getAggregation('storageSize');
     $results = array();
-    $total = 0;
-    foreach ($facets['storageSize']['entries'] as $entry)
+
+    foreach ($agg['buckets'] as $bucket)
     {
-      // Calculate running total
-      $total += $entry['total'];
-
-      // Create result from entry
-      $result = array();
-      $result['total'] = $total;
-      $result['count'] = $entry['total'];
-
-      // Convert millisecond timestamps to years and months
-      $date = date('Y-m-d', $entry['time'] / 1000);
-      $result['year'] = (integer)substr($date, 0, 4);
-      $result['month'] = (integer)substr($date, 5, 2);
-
-      if (isset($previousResult))
-      {
-        // Add missing months in between to creation results
-        while (($result['year'] === $previousResult['year'] &&
-          $result['month'] - $previousResult['month'] > 1) ||
-          $result['year'] - $previousResult['year'] > 1 ||
-          ($result['year'] - $previousResult['year'] === 1 &&
-          $result['month'] - $previousResult['month'] !== -11))
-        {
-          $missingResult = array();
-          $missingResult['total'] = $previousResult['total'];
-          $missingResult['count'] = 0;
-
-          if ($previousResult['month'] == 12)
-          {
-            $missingResult['year'] = $previousResult['year'] + 1;
-            $missingResult['month'] = 1;
-          }
-          else
-          {
-            $missingResult['year'] = $previousResult['year'];
-            $missingResult['month'] = $previousResult['month'] + 1;
-          }
-
-          $results[] = $missingResult;
-          $previousResult = $missingResult;
-        }
-      }
-
-      $results[] = $result;
-      $previousResult = $result;
-    }
-
-    $today = date('Y-m-d');
-    $currentYear = (integer)substr($today, 0, 4);
-    $currentMonth = (integer)substr($today, 5, 2);
-
-    // Add missing months at the end to creation results
-    while ($currentYear > $previousResult['year'] ||
-      $currentMonth > $previousResult['month'])
-    {
-      $missingResult = array();
-      $missingResult['total'] = $previousResult['total'];
-      $missingResult['count'] = 0;
-
-      if ($previousResult['month'] == 12)
-      {
-        $missingResult['year'] = $previousResult['year'] + 1;
-        $missingResult['month'] = 1;
-      }
-      else
-      {
-        $missingResult['year'] = $previousResult['year'];
-        $missingResult['month'] = $previousResult['month'] + 1;
-      }
-
-      $results[] = $missingResult;
-      $previousResult = $missingResult;
+      $yearMonth = split('-', $bucket['key_as_string']);
+      $results[] = array(
+        'year' => $yearMonth[0],
+        'month' => ltrim($yearMonth[1], '0'),
+        'count' => $bucket['size']['value'],
+        'total' => $bucket['total']['value']
+      );
     }
 
     return $results;

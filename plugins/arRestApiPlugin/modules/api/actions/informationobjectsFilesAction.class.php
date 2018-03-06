@@ -27,7 +27,7 @@ class ApiInformationObjectsFilesAction extends QubitApiAction
 
     // Pagination and sorting
     $this->prepareEsPagination($query);
-    $titleField = 'i18n.' . $this->context->user->getCulture() . '.title';
+    $titleField = 'i18n.' . $this->context->user->getCulture() . '.title.untouched';
     $this->prepareEsSorting(
       $query,
       array('name' => $titleField, 'size' => 'byteSize'),

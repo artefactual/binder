@@ -26,38 +26,37 @@ class ApiSummaryStorageUsedByMediaCategoryAction extends QubitApiAction
 
   protected function getResults()
   {
-    // Create query objects
     $query = new \Elastica\Query;
-    $queryBool = new \Elastica\Query\BoolQuery;
+    $query->setQuery(new \Elastica\Query\MatchAll);
 
-    // Get all information objects
-    $queryBool->addMust(new \Elastica\Query\MatchAll);
+    // We don't need details, just aggregation results
+    $query->setSize(0);
 
-    // Assign query
-    $query->setQuery($queryBool);
+    // Create nested aggregation to get total size by media category
+    $agg = $this->buildEsAgg('Terms', 'media_type', 'metsData.format.name');
+    $agg->addAggregation($this->buildEsAgg('Sum', 'size', 'metsData.size'));
+    $query->addAggregation($agg);
 
-    // We don't need details, just facet results
-    $query->setLimit(0);
-
-    // Use a term stats facet to calculate total bytes used per media category
-    $this->facetEsQuery('TermsStats', 'media_type_storage_stats', 'metsData.format.name', $query, array('valueField' => 'metsData.size'));
-
-    $resultSet = QubitSearch::getInstance()->index->getType('QubitInformationObject')->search($query);
-
-    $facets = $resultSet->getFacets();
-
-    foreach($facets['media_type_storage_stats']['terms'] as $index => $term)
+    try
     {
-      $mediaType = $term['term'];
-      $facets['media_type_storage_stats']['terms'][$index]['media_type'] = $mediaType;
-
-      // strip out extra data
-      foreach(array('count', 'total_count', 'min', 'max', 'mean', 'term') as $element)
-      {
-        unset($facets['media_type_storage_stats']['terms'][$index][$element]);
-      }
+      $resultSet = QubitSearch::getInstance()->index->getType('QubitInformationObject')->search($query);
+    }
+    catch (Exception $e)
+    {
+      return array();
     }
 
-    return $facets['media_type_storage_stats']['terms'];
+    $agg = $resultSet->getAggregation('media_type');
+    $results = array();
+
+    foreach($agg['buckets'] as $bucket)
+    {
+      $results[] = array(
+        'media_type' => $bucket['key'],
+        'total' => $bucket['size']['value']
+      );
+    }
+
+    return $results;
   }
 }

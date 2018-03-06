@@ -21,14 +21,7 @@ class ApiActorsBrowseAction extends QubitApiAction
 {
   protected function get($request)
   {
-    $data = array();
-
-    $results = $this->getResults();
-    $data['results'] = $results['results'];
-    $data['facets'] = $results['facets'];
-    $data['total'] = $results['total'];
-
-    return $data;
+    return $this->getResults();
   }
 
   protected function getResults()
@@ -81,12 +74,9 @@ class ApiActorsBrowseAction extends QubitApiAction
       $results[$hit->getId()] = $result;
     }
 
-    $facets = array();
-
     return
       array(
         'total' => $resultSet->getTotalHits(),
-        'facets' => $facets,
         'results' => $results);
   }
 }

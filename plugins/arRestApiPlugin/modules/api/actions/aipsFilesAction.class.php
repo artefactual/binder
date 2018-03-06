@@ -28,7 +28,7 @@ class ApiAipsFilesAction extends QubitApiAction
     // Pagination and sorting
     $this->prepareEsPagination($query);
     $this->prepareEsSorting($query, array(
-      'name' => 'i18n.' . $this->context->user->getCulture() . '.title',
+      'name' => 'i18n.' . $this->context->user->getCulture() . '.title.untouched',
       'size' => 'byteSize'));
 
     $queryBool->addMust(new \Elastica\Query\Term(array('aipUuid' => $request->uuid)));

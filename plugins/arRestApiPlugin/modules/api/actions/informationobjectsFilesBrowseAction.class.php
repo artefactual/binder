@@ -21,12 +21,7 @@ class ApiInformationObjectsFilesBrowseAction extends QubitApiAction
 {
   protected function get($request)
   {
-    $results = $this->getResults();
-    $data['results'] = $results['results'];
-    $data['facets'] = $results['facets'];
-    $data['total'] = $results['total'];
-
-    return $data;
+    return $this->getResults();
   }
 
   protected function getResults()
@@ -34,14 +29,13 @@ class ApiInformationObjectsFilesBrowseAction extends QubitApiAction
     // Create query objects
     $query = new \Elastica\Query;
     $queryBool = new \Elastica\Query\BoolQuery;
-    $filterBool = new \Elastica\Filter\BoolFilter;
 
     // Pagination and sorting
     $this->prepareEsPagination($query);
     $this->prepareEsSorting($query, array(
       'createdAt' => 'createdAt'));
 
-    // Filter to TMS Objects (artworks)
+    // Filter to digital objects
     $queryBool->addMust(new \Elastica\Query\Term(array('levelOfDescriptionId' => sfConfig::get('app_drmc_lod_digital_object_id'))));
 
     // Filter query
@@ -62,54 +56,76 @@ class ApiInformationObjectsFilesBrowseAction extends QubitApiAction
       $queryBool->addMust($queryText);
     }
 
-    // Filter selected facets
-    $this->filterEsRangeFacet('sizeFrom', 'sizeTo', 'metsData.size', $queryBool);
-    $this->filterEsRangeFacet('ingestedFrom', 'ingestedTo', 'metsData.dateIngested', $queryBool);
-    $this->filterEsFacetQuery('format', 'metsData.format.name', $queryBool, 'AND', array('noInteger' => true));
-    $this->filterEsFacetQuery('videoCodec', 'metsData.mediainfo.videoTracks.codec', $queryBool, 'AND', array('noInteger' => true));
-    $this->filterEsFacetQuery('audioCodec', 'metsData.mediainfo.audioTracks.codec', $queryBool, 'AND', array('noInteger' => true));
-    $this->filterEsFacetQuery('resolution', 'metsData.mediainfo.videoTracks.resolution', $queryBool);
-    $this->filterEsFacetQuery('chromaSubSampling', 'metsData.mediainfo.videoTracks.chromaSubsampling', $queryBool, 'AND', array('noInteger' => true));
-    $this->filterEsFacetQuery('colorSpace', 'metsData.mediainfo.videoTracks.colorSpace', $queryBool, 'AND', array('noInteger' => true));
-    $this->filterEsFacetQuery('sampleRate', 'metsData.mediainfo.audioTracks.samplingRate', $queryBool);
-    $this->filterEsFacetQuery('bitDepth', 'metsData.mediainfo.videoTracks.bitDepth', $queryBool);
+    // Filter selected aggregations
+    $this->filterEsRangeQuery('sizeFrom', 'sizeTo', 'metsData.size', $queryBool);
+    $this->filterEsRangeQuery('ingestedFrom', 'ingestedTo', 'metsData.dateIngested', $queryBool);
+    $this->filterEsQuery('format', 'metsData.format.name', $queryBool, 'AND', array('noInteger' => true));
+    $this->filterEsQuery('videoCodec', 'metsData.mediainfo.videoTracks.codec', $queryBool, 'AND', array('noInteger' => true));
+    $this->filterEsQuery('audioCodec', 'metsData.mediainfo.audioTracks.codec', $queryBool, 'AND', array('noInteger' => true));
+    $this->filterEsQuery('resolution', 'metsData.mediainfo.videoTracks.resolution', $queryBool);
+    $this->filterEsQuery('chromaSubSampling', 'metsData.mediainfo.videoTracks.chromaSubsampling', $queryBool, 'AND', array('noInteger' => true));
+    $this->filterEsQuery('colorSpace', 'metsData.mediainfo.videoTracks.colorSpace', $queryBool, 'AND', array('noInteger' => true));
+    $this->filterEsQuery('sampleRate', 'metsData.mediainfo.audioTracks.samplingRate', $queryBool);
+    $this->filterEsQuery('bitDepth', 'metsData.mediainfo.videoTracks.bitDepth', $queryBool);
 
-    // Add facets to the query
-    $this->facetEsQuery('Terms', 'format', 'metsData.format.name', $query);
-    $this->facetEsQuery('Terms', 'videoCodec', 'metsData.mediainfo.videoTracks.codec', $query);
-    $this->facetEsQuery('Terms', 'audioCodec', 'metsData.mediainfo.audioTracks.codec', $query);
-    $this->facetEsQuery('Terms', 'resolution', 'metsData.mediainfo.videoTracks.resolution', $query);
-    $this->facetEsQuery('Terms', 'chromaSubSampling', 'metsData.mediainfo.videoTracks.chromaSubsampling', $query);
-    $this->facetEsQuery('Terms', 'colorSpace', 'metsData.mediainfo.videoTracks.colorSpace', $query);
-    $this->facetEsQuery('Terms', 'sampleRate', 'metsData.mediainfo.audioTracks.samplingRate', $query);
-    $this->facetEsQuery('Terms', 'bitDepth', 'metsData.mediainfo.videoTracks.bitDepth', $query);
+    // Add aggregations to the query
+    $query->addAggregation($this->buildEsAgg('Terms', 'format', 'metsData.format.name'));
+    $query->addAggregation($this->buildEsAgg('Terms', 'videoCodec', 'metsData.mediainfo.videoTracks.codec'));
+    $query->addAggregation($this->buildEsAgg('Terms', 'audioCodec', 'metsData.mediainfo.audioTracks.codec'));
+    $query->addAggregation($this->buildEsAgg('Terms', 'resolution', 'metsData.mediainfo.videoTracks.resolution'));
+    $query->addAggregation($this->buildEsAgg('Terms', 'chromaSubSampling', 'metsData.mediainfo.videoTracks.chromaSubsampling'));
+    $query->addAggregation($this->buildEsAgg('Terms', 'colorSpace', 'metsData.mediainfo.videoTracks.colorSpace'));
+    $query->addAggregation($this->buildEsAgg('Terms', 'sampleRate', 'metsData.mediainfo.audioTracks.samplingRate'));
+    $query->addAggregation($this->buildEsAgg('Terms', 'bitDepth', 'metsData.mediainfo.videoTracks.bitDepth'));
 
     $sizeRanges = array(
-      array('to' => 512000),
-      array('from' => 512000, 'to' => 1048576),
-      array('from' => 1048576, 'to' => 2097152),
-      array('from' => 2097152, 'to' => 5242880),
-      array('from' => 5242880, 'to' => 10485760),
-      array('from' => 10485760));
+      array('from' => null, 'to' => 512000, 'key' => 'Smaller than 500 KB'),
+      array('from' => 512000, 'to' => 1048576, 'key' => 'Between 500 KB and 1 MB'),
+      array('from' => 1048576, 'to' => 2097152, 'key' => 'Between 1 MB and 2 MB'),
+      array('from' => 2097152, 'to' => 5242880, 'key' => 'Between 2 MB and 5 MB'),
+      array('from' => 5242880, 'to' => 10485760, 'key' => 'Between 5 MB and 10 MB'),
+      array('from' => 10485760, 'to' => null, 'key' => 'Bigger than 10 MB')
+    );
 
-    $this->facetEsQuery('Range', 'size', 'metsData.size', $query, array('ranges' => $sizeRanges));
+    $query->addAggregation($this->buildEsAgg(
+      'Range',
+      'size',
+      'metsData.size',
+      array('ranges' => $sizeRanges)
+    ));
 
     $now = new DateTime();
     $now->setTime(0, 0);
 
     $dateRanges = array(
-      array('to' => $now->modify('-1 year')->getTimestamp().'000'),
-      array('from' => $now->getTimestamp().'000'),
-      array('from' => $now->modify('+11 months')->getTimestamp().'000'),
-      array('from' => $now->modify('+1 month')->modify('-7 days')->getTimestamp().'000'));
+      array(
+        'from' => null,
+        'to' => $now->modify('-1 year')->getTimestamp().'000',
+        'key' => 'Older than a year'
+      ),
+      array(
+        'from' => $now->getTimestamp().'000',
+        'to' => null,
+        'key' => 'From last year'
+      ),
+      array(
+        'from' => $now->modify('+11 months')->getTimestamp().'000',
+        'to' => null,
+        'key' => 'From last month'
+      ),
+      array(
+        'from' => $now->modify('+1 month')->modify('-7 days')->getTimestamp().'000',
+        'to' => null,
+        'key' => 'From last week'
+      )
+    );
 
-    $this->dateRangesLabels = array(
-      'Older than a year',
-      'From last year',
-      'From last month',
-      'From last week');
-
-    $this->facetEsQuery('Range', 'dateIngested', 'metsData.dateIngested', $query, array('ranges' => $dateRanges));
+    $query->addAggregation($this->buildEsAgg(
+      'DateRange',
+      'dateIngested',
+      'metsData.dateIngested',
+      array('ranges' => $dateRanges)
+    ));
 
     // Limit fields
     $query->setSource(array(
@@ -132,12 +148,6 @@ class ApiInformationObjectsFilesBrowseAction extends QubitApiAction
       'aipUuid',
       'aipName',
       'originalRelativePathWithinAip'));
-
-    // Set filter
-    if (0 < count($filterBool->toArray()))
-    {
-      $query->setPostFilter($filterBool);
-    }
 
     // Assign query
     $query->setQuery($queryBool);
@@ -174,7 +184,7 @@ class ApiInformationObjectsFilesBrowseAction extends QubitApiAction
 
       if (isset($doc['digitalObject']['mediaTypeId']) && !empty($doc['digitalObject']['mediaTypeId']))
       {
-        $this->addItemToArray($result, 'media_type', $this->getFacetLabel('mediaType', $doc['digitalObject']['mediaTypeId']));
+        $this->addItemToArray($result, 'media_type', $this->getAggLabel('mediaType', $doc['digitalObject']['mediaTypeId']));
       }
 
       $this->addItemToArray($result, 'aip_uuid', $doc['aipUuid']);
@@ -184,17 +194,17 @@ class ApiInformationObjectsFilesBrowseAction extends QubitApiAction
       $results[$hit->getId()] = $result;
     }
 
-    $facets = $resultSet->getFacets();
-    $this->populateFacets($facets);
+    $aggs = $resultSet->getAggregations();
+    $this->formatAggs($aggs);
 
     return
       array(
         'total' => $resultSet->getTotalHits(),
-        'facets' => $facets,
+        'aggs' => $aggs,
         'results' => $results);
   }
 
-  protected function getFacetLabel($name, $id)
+  protected function getAggLabel($name, $id)
   {
     switch ($name)
     {
@@ -203,11 +213,6 @@ class ApiInformationObjectsFilesBrowseAction extends QubitApiAction
         {
           return $item->getName(array('cultureFallback' => true));
         }
-
-        break;
-
-      case 'dateIngested':
-        return $this->dateRangesLabels[$id];
 
         break;
 

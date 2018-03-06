@@ -9,7 +9,7 @@
    *    specially because on-select-page is a much better approach!
    */
 
-  angular.module('drmc.directives').directive('arPager', function ($compile, SETTINGS) {
+  angular.module('drmc.directives').directive('arPager', function ($compile, SETTINGS, AlertsService) {
 
     return {
       restrict: 'E',
@@ -40,17 +40,28 @@
           if (scope.page === scope.numberOfPages) {
             return false;
           }
-          scope.page++;
+          scope.go(scope.page + 1);
         };
 
         scope.prev = function () {
           if (scope.page === 1) {
             return false;
           }
-          scope.page--;
+          scope.go(scope.page - 1);
         };
 
         scope.go = function (page) {
+          // Avoid pagination over 10,000 records
+          if (scope.itemsPerPage * page > 10000) {
+            // Show alert and avoid hitting the API
+            var alertOptions = {
+              type: 'warning',
+              message: 'To avoid using vast amounts of memory, Binder limits pagination to 10,000 records. Please, narrow down your results.',
+              strongMessage: 'Pagination limit reached.'
+            };
+            AlertsService.addAlert(alertOptions);
+            return;
+          }
           scope.page = page;
         };
 

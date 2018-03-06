@@ -26,30 +26,24 @@ class ApiSummaryStorageUsedByCodecAction extends QubitApiAction
 
   protected function getResults()
   {
-    // Create query objects
     $query = new \Elastica\Query;
-    $queryBool = new \Elastica\Query\BoolQuery;
+    $query->setQuery(new \Elastica\Query\MatchAll);
 
-    // Get all information objects
-    $queryBool->addMust(new \Elastica\Query\MatchAll);
+    // We don't need details, just aggregation results
+    $query->setSize(0);
 
-    // Assign query
-    $query->setQuery($queryBool);
-
-    // We don't need details, just facet results
-    $query->setLimit(0);
-
-    // Use a term stats facet to calculate total bytes used per codec type
+    // Add nested aggregations to calculate total bytes used per codec
     $codecTypes = array(
       'general_track_stats' => 'generalTracks',
       'video_track_stats'   => 'videoTracks',
       'audio_track_stats'   => 'audioTracks'
     );
 
-    // Add facet for each codec type
-    foreach($codecTypes as $facetName => $mediaInfoPropName)
+    foreach($codecTypes as $aggName => $mediaInfoPropName)
     {
-      $this->facetEsQuery('TermsStats', $facetName, 'digitalObjects.metsData.mediainfo.'. $mediaInfoPropName .'.codec', $query, array('valueField' => 'digitalObjects.metsData.size'));
+      $agg = $this->buildEsAgg('Terms', $aggName, 'digitalObjects.metsData.mediainfo.'. $mediaInfoPropName .'.codec');
+      $agg->addAggregation($this->buildEsAgg('Sum', 'size', 'digitalObjects.metsData.size'));
+      $query->addAggregation($agg);
     }
 
     try
@@ -61,25 +55,18 @@ class ApiSummaryStorageUsedByCodecAction extends QubitApiAction
       return array();
     }
 
-    $facets = $resultSet->getFacets();
-
-    // Amalgamate facet data for each codec type
     $results = array();
 
-    foreach($codecTypes as $facetName => $mediaInfoPropName)
+    foreach($codecTypes as $aggName => $mediaInfoPropName)
     {
-      foreach($facets[$facetName]['terms'] as $index => $term)
+      $agg = $resultSet->getAggregation($aggName);
+      foreach($agg['buckets'] as $bucket)
       {
-        $mediaType = $term['term'];
-        $facets[$facetName]['terms'][$index]['codec'] = strtoupper($mediaType);
-
-        // strip out extra data
-        foreach(array('count', 'total_count', 'min', 'max', 'mean', 'term') as $element) {
-          unset($facets[$facetName]['terms'][$index][$element]);
-        }
+        $results[] = array(
+          'codec' => strtoupper($bucket['key']),
+          'total' => $bucket['size']['value']
+        );
       }
-
-      $results = array_merge($results, $facets[$facetName]['terms']);
     }
 
     return $results;

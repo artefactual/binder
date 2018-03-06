@@ -26,37 +26,39 @@ class ApiSummaryDepartmentArtworkCountAction extends QubitApiAction
 
   protected function getResults()
   {
-    // load department terms
+    // Load department terms
     $departmentTaxonomyId = sfConfig::get('app_drmc_taxonomy_departments_id');
     $departmentTerms = QubitFlatfileImport::getTaxonomyTerms($departmentTaxonomyId);
 
-    // Create query objects
     $query = new \Elastica\Query;
-    $queryBool = new \Elastica\Query\BoolQuery;
+    $query->setQuery(new \Elastica\Query\MatchAll);
 
-    // Get all information objects
-    $queryBool->addMust(new \Elastica\Query\MatchAll);
+    // We don't need details, just aggregation results
+    $query->setSize(0);
 
-    // Assign query
-    $query->setQuery($queryBool);
+    $query->addAggregation($this->buildEsAgg('Terms', 'department', 'tmsObject.department.id'));
 
-    // We don't need details, just facet results
-    $query->setLimit(0);
-
-    $this->facetEsQuery('Terms', 'department_count', 'tmsObject.department.id', $query);
-
-    $resultSet = QubitSearch::getInstance()->index->getType('QubitInformationObject')->search($query);
-
-    $facets = $resultSet->getFacets();
-
-    foreach($facets['department_count']['terms'] as $index => $term)
+    try
     {
-      $departmentId = $term['term'];
-      $departmentName = $departmentTerms[$departmentId]->name;
-      $facets['department_count']['terms'][$index]['department'] = $departmentName;
-      unset($facets['department_count']['terms'][$index]['term']);
+      $resultSet = QubitSearch::getInstance()->index->getType('QubitInformationObject')->search($query);
+    }
+    catch (Exception $e)
+    {
+      return array();
     }
 
-    return $facets['department_count']['terms'];
+    $agg = $resultSet->getAggregation('department');
+    $results = array();
+
+    foreach($agg['buckets'] as $bucket)
+    {
+      $name = $departmentTerms[$bucket['key']]->name;
+      $results[] = array(
+        'department' => $name,
+        'count' => $bucket['doc_count']
+      );
+    }
+
+    return $results;
   }
 }

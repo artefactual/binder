@@ -205,8 +205,11 @@ class arElasticSearchPluginUtil
           $fields = array_merge($fields, self::getAllObjectStringFields($object['properties'][$propertyName], $prefix.$propertyName.'.', $cultures));
         }
         // Get string fields included in _all
-        else if ((!isset($propertyProperties['include_in_all']) || $propertyProperties['include_in_all'])
-          && (isset($propertyProperties['type']) && $propertyProperties['type'] == 'string'))
+        else if ((!isset($propertyProperties['include_in_all'])
+          || $propertyProperties['include_in_all'])
+          && (isset($propertyProperties['type'])
+          && ($propertyProperties['type'] == 'text'
+          || $propertyProperties['type'] == 'keyword')))
         {
           // Concatenate object name ($prefix) and field name
           $fields[] = $prefix.$propertyName;

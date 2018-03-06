@@ -21,23 +21,22 @@ class ApiReportsGenerateAction extends QubitApiAction
 {
   protected function get($request)
   {
+    if (!isset($request->type))
+    {
+      throw new QubitApi404Exception('Type not set');
+    }
+
     $this->query = new \Elastica\Query;
     $this->queryBool = new \Elastica\Query\BoolQuery;
     $this->queryBool->addMust(new \Elastica\Query\MatchAll);
 
     // Set end date to last second of that day
-    $this->request->to += 86399000;
-
-    // ES only gets 10 results if size is not set
-    // Max int32 value may cause OutOfMemoryError
-    $this->query->setSize(99999);
+    if (isset($this->request->to))
+    {
+      $this->request->to += 86399000;
+    }
 
     $this->results = array();
-
-    if (!isset($request->type))
-    {
-      throw new QubitApi404Exception('Type not set');
-    }
 
     switch ($request->type)
     {
@@ -67,48 +66,52 @@ class ApiReportsGenerateAction extends QubitApiAction
   protected function granularIngest()
   {
     // Date range
-    $this->filterEsRangeFacet('from', 'to', 'createdAt', $this->queryBool);
+    $this->filterEsRangeQuery('from', 'to', 'createdAt', $this->queryBool);
 
     $this->query->setSort(array('createdAt' => 'desc'));
     $this->query->setQuery($this->queryBool);
 
-    $resultSet = QubitSearch::getInstance()->index->getType('QubitAip')->search($this->query);
+    $search = QubitSearch::getInstance()->index->getType('QubitAip')->createSearch($this->query);
+    $scroll = new \Elastica\Scroll($search);
 
-    foreach ($resultSet as $hit)
+    foreach ($scroll as $resultSet)
     {
-      $doc = $hit->getData();
-
-      $aip = array();
-
-      $this->addItemToArray($aip, 'name', $doc['filename']);
-      $this->addItemToArray($aip, 'uuid', $doc['uuid']);
-      $this->addItemToArray($aip, 'ingestion_date', $doc['createdAt']);
-
-      if (isset($doc['type']))
+      foreach ($resultSet as $hit)
       {
-        $this->addItemToArray($aip, 'classification', get_search_i18n($doc['type'], 'name'));
-      }
+        $doc = $hit->getData();
 
-      if (isset($doc['partOf']))
-      {
-        $this->addItemToArray($aip['part_of'], 'id', $doc['partOf']['id']);
-        $this->addItemToArray($aip['part_of'], 'title', get_search_i18n($doc['partOf'], 'title'));
-        $this->addItemToArray($aip['part_of'], 'department', $doc['partOf']['department']['name']);
-      }
+        $aip = array();
 
-      $this->addItemToArray($aip, 'ingestion_user', $doc['ingestionUser']);
-      $this->addItemToArray($aip, 'attached_to', $doc['attachedTo']);
+        $this->addItemToArray($aip, 'name', $doc['filename']);
+        $this->addItemToArray($aip, 'uuid', $doc['uuid']);
+        $this->addItemToArray($aip, 'ingestion_date', $doc['createdAt']);
+
+        if (isset($doc['type']))
+        {
+          $this->addItemToArray($aip, 'classification', get_search_i18n($doc['type'], 'name'));
+        }
+
+        if (isset($doc['partOf']))
+        {
+          $this->addItemToArray($aip['part_of'], 'id', $doc['partOf']['id']);
+          $this->addItemToArray($aip['part_of'], 'title', get_search_i18n($doc['partOf'], 'title'));
+          $this->addItemToArray($aip['part_of'], 'department', $doc['partOf']['department']['name']);
+        }
+
+        $this->addItemToArray($aip, 'ingestion_user', $doc['ingestionUser']);
+        $this->addItemToArray($aip, 'attached_to', $doc['attachedTo']);
 
 
-      // Add results grouped by user and department
-      if (isset($aip['ingestion_user']))
-      {
-        $this->results['by_user'][$aip['ingestion_user']]['results'][] = $aip;
-      }
+        // Add results grouped by user and department
+        if (isset($aip['ingestion_user']))
+        {
+          $this->results['by_user'][$aip['ingestion_user']]['results'][] = $aip;
+        }
 
-      if (isset($aip['part_of']['department']))
-      {
-        $this->results['by_department'][$aip['part_of']['department']]['results'][] = $aip;
+        if (isset($aip['part_of']['department']))
+        {
+          $this->results['by_department'][$aip['part_of']['department']]['results'][] = $aip;
+        }
       }
     }
 
@@ -169,19 +172,24 @@ class ApiReportsGenerateAction extends QubitApiAction
   {
     // New artworks
     $this->queryBool->addMust(new \Elastica\Query\Term(array('levelOfDescriptionId' => sfConfig::get('app_drmc_lod_artwork_record_id'))));
-    $this->filterEsRangeFacet('from', 'to', 'createdAt', $this->queryBool);
+    $this->filterEsRangeQuery('from', 'to', 'createdAt', $this->queryBool);
     $this->query->setQuery($this->queryBool);
 
-    $resultSet = QubitSearch::getInstance()->index->getType('QubitInformationObject')->search($this->query);
+    $search = QubitSearch::getInstance()->index->getType('QubitInformationObject')->createSearch($this->query);
+    $scroll = new \Elastica\Scroll($search);
 
-    $this->results['new_artworks'] = $resultSet->getTotalHits();
-
-    // Store new artworks to calculate the amount of artworks with material added
+    // Store new artworks to not add them to the Artworks with AIPs added
     $newWorks = array();
-    foreach ($resultSet as $hit)
+    foreach ($scroll as $resultSet)
     {
-      $newWorks[] = $hit->getId();
+      foreach ($resultSet as $hit)
+      {
+        $newWorks[] = $hit->getId();
+      }
     }
+
+    // Can't get total hits from scroll
+    $this->results['new_artworks'] = count($newWorks);
 
     // New tech records
     $this->query = new \Elastica\Query;
@@ -189,8 +197,9 @@ class ApiReportsGenerateAction extends QubitApiAction
     $this->queryBool->addMust(new \Elastica\Query\MatchAll);
 
     $this->queryBool->addMust(new \Elastica\Query\Term(array('levelOfDescriptionId' => sfConfig::get('app_drmc_lod_supporting_technology_record_id'))));
-    $this->filterEsRangeFacet('from', 'to', 'createdAt', $this->queryBool);
+    $this->filterEsRangeQuery('from', 'to', 'createdAt', $this->queryBool);
     $this->query->setQuery($this->queryBool);
+    $this->query->setSize(0);
 
     $resultSet = QubitSearch::getInstance()->index->getType('QubitInformationObject')->search($this->query);
 
@@ -200,54 +209,61 @@ class ApiReportsGenerateAction extends QubitApiAction
     $this->query = new \Elastica\Query;
     $this->queryBool = new \Elastica\Query\BoolQuery;
     $this->queryBool->addMust(new \Elastica\Query\MatchAll);
-    $this->query->setSize(99999);
 
-    $this->filterEsRangeFacet('from', 'to', 'createdAt', $this->queryBool);
+    $this->filterEsRangeQuery('from', 'to', 'createdAt', $this->queryBool);
     $this->query->setQuery($this->queryBool);
 
-    $resultSet = QubitSearch::getInstance()->index->getType('QubitAip')->search($this->query);
+    $search = QubitSearch::getInstance()->index->getType('QubitAip')->createSearch($this->query);
+    $scroll = new \Elastica\Scroll($search);
 
-    $this->results['aips_ingested'] = $resultSet->getTotalHits();
-
-    $works = array();
+    // Artworks with AIPs added
+    $addedAipsWorks = array();
 
     // Files ingested and total filesize ingested
+    $this->results['aips_ingested'] = 0;
     $this->results['files_ingested'] = 0;
     $this->results['total_filesize_ingested'] = 0;
 
-    foreach ($resultSet as $hit)
+    foreach ($scroll as $resultSet)
     {
-      $doc = $hit->getData();
-
-      if (isset($doc['digitalObjectCount']))
+      foreach ($resultSet as $hit)
       {
-        $this->results['files_ingested'] += $doc['digitalObjectCount'];
-      }
+        $doc = $hit->getData();
 
-      if (isset($doc['sizeOnDisk']))
-      {
-        $this->results['total_filesize_ingested'] += $doc['sizeOnDisk'];
-      }
+        if (isset($doc['digitalObjectCount']))
+        {
+          $this->results['files_ingested'] += $doc['digitalObjectCount'];
+        }
 
-      // Check if it's part of an Artwork to calculate the amount of artworks with material added
-      if (isset($doc['partOf']['levelOfDescriptionId']) && $doc['partOf']['levelOfDescriptionId'] == sfConfig::get('app_drmc_lod_artwork_record_id'))
-      {
-        $works[] = $doc['partOf']['id'];
+        if (isset($doc['sizeOnDisk']))
+        {
+          $this->results['total_filesize_ingested'] += $doc['sizeOnDisk'];
+        }
+
+        $this->results['aips_ingested']++;
+
+        // Check if it's part of an Artwork to calculate the amount of artworks with AIPs added
+        if (isset($doc['partOf']['levelOfDescriptionId']) && $doc['partOf']['levelOfDescriptionId'] == sfConfig::get('app_drmc_lod_artwork_record_id'))
+        {
+          // Avoid duplicates
+          if (in_array($doc['partOf']['id'], $addedAipsWorks))
+          {
+            continue;
+          }
+
+          // Ignore it if added as new work
+          if (in_array($doc['partOf']['id'], $newWorks))
+          {
+            continue;
+          }
+
+          $addedAipsWorks[] = $doc['partOf']['id'];
+        }
       }
     }
 
-    // Remove new artworks from all the artworks (can't use array_diff to keep duplicates)
-    foreach ($newWorks as $work)
-    {
-      $pos = array_search($work, $works);
-      unset($works[$pos]);
-    }
-
-    // Now remove duplicates
-    $works = array_unique($works, SORT_STRING);
-
-    // Artworks with new materials added
-    $this->results['artworks_with_materials_added'] = count($works);
+    // Remove new artworks from artworks with AIPs added
+    $this->results['artworks_with_materials_added'] = count($addedAipsWorks);
 
     // Aggregate
     $this->results['aggregate'] = $this->results['artworks_with_materials_added'] + $this->results['new_artworks'];
@@ -256,51 +272,55 @@ class ApiReportsGenerateAction extends QubitApiAction
   protected function fixity()
   {
     // Date range
-    $this->filterEsRangeFacet('from', 'to', 'timeStarted', $this->queryBool);
+    $this->filterEsRangeQuery('from', 'to', 'timeStarted', $this->queryBool);
 
     $this->query->setSort(array('timeStarted' => 'desc'));
     $this->query->setQuery($this->queryBool);
 
-    $resultSet = QubitSearch::getInstance()->index->getType('QubitFixityReport')->search($this->query);
+    $search = QubitSearch::getInstance()->index->getType('QubitFixityReport')->createSearch($this->query);
+    $scroll = new \Elastica\Scroll($search);
 
-    foreach ($resultSet as $hit)
+    foreach ($scroll as $resultSet)
     {
-      $doc = $hit->getData();
-
-      // Store session_uuid for currently running check (not included in the results)
-      if (!isset($doc['timeCompleted']) && isset($doc['sessionUuid']))
+      foreach ($resultSet as $hit)
       {
-        $currentlyChecking = $doc['sessionUuid'];
+        $doc = $hit->getData();
 
-        continue;
-      }
+        // Store session_uuid for currently running check (not included in the results)
+        if (!isset($doc['timeCompleted']) && isset($doc['sessionUuid']))
+        {
+          $currentlyChecking = $doc['sessionUuid'];
 
-      $fixity = array();
+          continue;
+        }
 
-      if (isset($doc['success']))
-      {
-        $fixity['success'] = (bool)$doc['success'];
-      }
+        $fixity = array();
 
-      $this->addItemToArray($fixity, 'time_started', arRestApiPluginUtils::convertDate($doc['timeStarted']));
-      $this->addItemToArray($fixity, 'time_completed', arRestApiPluginUtils::convertDate($doc['timeCompleted']));
+        if (isset($doc['success']))
+        {
+          $fixity['success'] = (bool)$doc['success'];
+        }
 
-      if (isset($doc['timeCompleted']) && isset($doc['timeStarted']))
-      {
-        $duration = strtotime($doc['timeCompleted']) - strtotime($doc['timeStarted']);
-        $this->addItemToArray($fixity, 'duration', $duration);
-      }
+        $this->addItemToArray($fixity, 'time_started', arRestApiPluginUtils::convertDate($doc['timeStarted']));
+        $this->addItemToArray($fixity, 'time_completed', arRestApiPluginUtils::convertDate($doc['timeCompleted']));
 
-      $this->addItemToArray($fixity['aip'], 'uuid', $doc['aip']['uuid']);
-      $this->addItemToArray($fixity['aip'], 'name', $doc['aip']['name']);
-      $this->addItemToArray($fixity['aip'], 'part_of', $doc['aip']['partOf']);
-      $this->addItemToArray($fixity['aip'], 'attached_to', $doc['aip']['attachedTo']);
+        if (isset($doc['timeCompleted']) && isset($doc['timeStarted']))
+        {
+          $duration = strtotime($doc['timeCompleted']) - strtotime($doc['timeStarted']);
+          $this->addItemToArray($fixity, 'duration', $duration);
+        }
+
+        $this->addItemToArray($fixity['aip'], 'uuid', $doc['aip']['uuid']);
+        $this->addItemToArray($fixity['aip'], 'name', $doc['aip']['name']);
+        $this->addItemToArray($fixity['aip'], 'part_of', $doc['aip']['partOf']);
+        $this->addItemToArray($fixity['aip'], 'attached_to', $doc['aip']['attachedTo']);
 
 
-      // Add results grouped by session_uuid
-      if (isset($doc['sessionUuid']))
-      {
-        $this->results[$doc['sessionUuid']]['results'][] = $fixity;
+        // Add results grouped by session_uuid
+        if (isset($doc['sessionUuid']))
+        {
+          $this->results[$doc['sessionUuid']]['results'][] = $fixity;
+        }
       }
     }
 
@@ -363,7 +383,7 @@ class ApiReportsGenerateAction extends QubitApiAction
   protected function fixityError()
   {
     // Date range
-    $this->filterEsRangeFacet('from', 'to', 'timeStarted', $this->queryBool);
+    $this->filterEsRangeQuery('from', 'to', 'timeStarted', $this->queryBool);
 
     // Only errors
     $this->queryBool->addMust(new \Elastica\Query\Term(array('success' => false)));
@@ -371,25 +391,28 @@ class ApiReportsGenerateAction extends QubitApiAction
     $this->query->setSort(array('timeCompleted' => 'desc'));
     $this->query->setQuery($this->queryBool);
 
-    $resultSet = QubitSearch::getInstance()->index->getType('QubitFixityReport')->search($this->query);
+    $search = QubitSearch::getInstance()->index->getType('QubitFixityReport')->createSearch($this->query);
+    $scroll = new \Elastica\Scroll($search);
 
-    foreach ($resultSet as $hit)
+    foreach ($scroll as $resultSet)
     {
-      $doc = $hit->getData();
-
-      $fixity = array();
-
-      $this->addItemToArray($fixity, 'fail_time', arRestApiPluginUtils::convertDate($doc['timeCompleted']));
-      $this->addItemToArray($fixity['aip'], 'uuid', $doc['aip']['uuid']);
-      $this->addItemToArray($fixity['aip'], 'name', $doc['aip']['name']);
-      $this->addItemToArray($fixity['aip'], 'part_of', $doc['aip']['partOf']);
-      $this->addItemToArray($fixity['aip'], 'attached_to', $doc['aip']['attachedTo']);
-
-      // Get last fixity recovery data
-      if (isset($doc['aip']['id']))
+      foreach ($resultSet as $hit)
       {
-        // TODO: Add fixity recovery data to fixity_reports in ES
-        $sql = <<<sql
+        $doc = $hit->getData();
+
+        $fixity = array();
+
+        $this->addItemToArray($fixity, 'fail_time', arRestApiPluginUtils::convertDate($doc['timeCompleted']));
+        $this->addItemToArray($fixity['aip'], 'uuid', $doc['aip']['uuid']);
+        $this->addItemToArray($fixity['aip'], 'name', $doc['aip']['name']);
+        $this->addItemToArray($fixity['aip'], 'part_of', $doc['aip']['partOf']);
+        $this->addItemToArray($fixity['aip'], 'attached_to', $doc['aip']['attachedTo']);
+
+        // Get last fixity recovery data
+        if (isset($doc['aip']['id']))
+        {
+          // TODO: Add fixity recovery data to fixity_reports in ES
+          $sql = <<<sql
 
 SELECT
   rec.time_started,
@@ -408,28 +431,29 @@ LIMIT 1;
 
 sql;
 
-        $result = QubitPdo::fetchOne($sql, array($doc['aip']['id']));
+          $result = QubitPdo::fetchOne($sql, array($doc['aip']['id']));
 
-        if (false !== $result)
-        {
-          if (isset($result->success))
+          if (false !== $result)
           {
-            $fixity['recovery']['success'] = (bool)$result->success;
-          }
+            if (isset($result->success))
+            {
+              $fixity['recovery']['success'] = (bool)$result->success;
+            }
 
-          $this->addItemToArray($fixity['recovery'], 'user', $result->username);
-          $this->addItemToArray($fixity['recovery'], 'time_started', arRestApiPluginUtils::convertDate($result->time_started));
-          $this->addItemToArray($fixity['recovery'], 'time_completed', arRestApiPluginUtils::convertDate($result->time_completed));
+            $this->addItemToArray($fixity['recovery'], 'user', $result->username);
+            $this->addItemToArray($fixity['recovery'], 'time_started', arRestApiPluginUtils::convertDate($result->time_started));
+            $this->addItemToArray($fixity['recovery'], 'time_completed', arRestApiPluginUtils::convertDate($result->time_completed));
 
-          if (isset($result->time_started) && isset($result->time_completed))
-          {
-            $duration = strtotime($result->time_completed) - strtotime($result->time_started);
-            $this->addItemToArray($fixity['recovery'], 'duration', $duration);
+            if (isset($result->time_started) && isset($result->time_completed))
+            {
+              $duration = strtotime($result->time_completed) - strtotime($result->time_started);
+              $this->addItemToArray($fixity['recovery'], 'duration', $duration);
+            }
           }
         }
-      }
 
-      $this->results['results'][] = $fixity;
+        $this->results['results'][] = $fixity;
+      }
     }
 
     // Get totals row
@@ -847,85 +871,89 @@ sql;
     );
 
     $this->queryBool->addMust(new \Elastica\Query\Terms('levelOfDescriptionId', $componentLevels));
-    $this->filterEsRangeFacet('from', 'to', 'createdAt', $this->queryBool);
+    $this->filterEsRangeQuery('from', 'to', 'createdAt', $this->queryBool);
     $this->query->setQuery($this->queryBool);
 
-    $resultSet = QubitSearch::getInstance()->index->getType('QubitInformationObject')->search($this->query);
+    $search = QubitSearch::getInstance()->index->getType('QubitInformationObject')->createSearch($this->query);
+    $scroll = new \Elastica\Scroll($search);
 
-    foreach ($resultSet as $hit)
+    foreach ($scroll as $resultSet)
     {
-      $doc = $hit->getData();
-
-      $component = array();
-
-      $this->addItemToArray($component, 'artwork', get_search_i18n($doc['tmsComponent']['artwork'], 'title'));
-      $this->addItemToArray($component, 'artist', $doc['tmsComponent']['artwork']['artist']);
-      $this->addItemToArray($component, 'department', $doc['tmsComponent']['artwork']['departmentName']);
-      $this->addItemToArray($component, 'component', get_search_i18n($doc, 'title'));
-
-      if (isset($doc['levelOfDescriptionId']))
+      foreach ($resultSet as $hit)
       {
-        $this->addItemToArray($component, 'status', $this->getTermName($doc['levelOfDescriptionId']));
-      }
+        $doc = $hit->getData();
 
-      // Defaults for each component
-      $countAips = $countFiles = $countSize = 0;
-      $fixitySuccess = $lastFixityDate = null;
+        $component = array();
 
-      // Calculate counts and obtain fixity data
-      if (isset($doc['aips']))
-      {
-        // If there are AIPS make true fixity success by default
-        $fixitySuccess = true;
+        $this->addItemToArray($component, 'artwork', get_search_i18n($doc['tmsComponent']['artwork'], 'title'));
+        $this->addItemToArray($component, 'artist', $doc['tmsComponent']['artwork']['artist']);
+        $this->addItemToArray($component, 'department', $doc['tmsComponent']['artwork']['departmentName']);
+        $this->addItemToArray($component, 'component', get_search_i18n($doc, 'title'));
 
-        foreach ($doc['aips'] as $aip)
+        if (isset($doc['levelOfDescriptionId']))
         {
-          $countAips++;
-          $countFiles += $aip['digitalObjectCount'];
-          $countSize += $aip['sizeOnDisk'];
+          $this->addItemToArray($component, 'status', $this->getTermName($doc['levelOfDescriptionId']));
+        }
 
-          // Get last fixity check for the AIP
-          // TODO? Add fixity data to components in ES and update component when fixity checks are added
-          $fixityQuery = new \Elastica\Query;
-          $fixityQueryBool = new \Elastica\Query\BoolQuery;
-          $fixityQueryBool->addMust(new \Elastica\Query\Term(array('aip.uuid' => $aip['uuid'])));
+        // Defaults for each component
+        $countAips = $countFiles = $countSize = 0;
+        $fixitySuccess = $lastFixityDate = null;
 
-          $fixityQuery->setQuery($fixityQueryBool);
-          $fixityQuery->setSort(array('timeCompleted' => 'desc'));
-          $fixityQuery->setLimit(1);
+        // Calculate counts and obtain fixity data
+        if (isset($doc['aips']))
+        {
+          // If there are AIPS make true fixity success by default
+          $fixitySuccess = true;
 
-          $fixityResultSet = QubitSearch::getInstance()->index->getType('QubitFixityReport')->search($fixityQuery);
-          $fixityResults = $fixityResultSet->getResults();
-
-          if (count($fixityResults) == 1)
+          foreach ($doc['aips'] as $aip)
           {
-            $fixityDoc = $fixityResults[0]->getData();
+            $countAips++;
+            $countFiles += $aip['digitalObjectCount'];
+            $countSize += $aip['sizeOnDisk'];
 
-            // If the last check failed set global fixity status as false
-            if (isset($fixityDoc['success']) && !(bool)$fixityDoc['success'])
-            {
-              $fixitySuccess = false;
-            }
+            // Get last fixity check for the AIP
+            // TODO? Add fixity data to components in ES and update component when fixity checks are added
+            $fixityQuery = new \Elastica\Query;
+            $fixityQueryBool = new \Elastica\Query\BoolQuery;
+            $fixityQueryBool->addMust(new \Elastica\Query\Term(array('aip.uuid' => $aip['uuid'])));
 
-            // Update last check date
-            if (isset($fixityDoc['timeCompleted']) && (!isset($lastFixityDate) || $fixityDoc['timeCompleted'] > $lastFixityDate))
+            $fixityQuery->setQuery($fixityQueryBool);
+            $fixityQuery->setSort(array('timeCompleted' => 'desc'));
+            $fixityQuery->setSize(1);
+
+            $fixityResultSet = QubitSearch::getInstance()->index->getType('QubitFixityReport')->search($fixityQuery);
+            $fixityResults = $fixityResultSet->getResults();
+
+            if (count($fixityResults) == 1)
             {
-              $lastFixityDate = $fixityDoc['timeCompleted'];
+              $fixityDoc = $fixityResults[0]->getData();
+
+              // If the last check failed set global fixity status as false
+              if (isset($fixityDoc['success']) && !(bool)$fixityDoc['success'])
+              {
+                $fixitySuccess = false;
+              }
+
+              // Update last check date
+              if (isset($fixityDoc['timeCompleted']) && (!isset($lastFixityDate) || $fixityDoc['timeCompleted'] > $lastFixityDate))
+              {
+                $lastFixityDate = $fixityDoc['timeCompleted'];
+              }
             }
           }
         }
-      }
 
-      $component['aips_count'] = $countAips;
-      $component['files_count'] = $countFiles;
-      $component['size_count'] = $countSize;
-      $component['fixity_success'] = $fixitySuccess;
-      $component['last_fixity_date'] = $lastFixityDate;
+        $component['aips_count'] = $countAips;
+        $component['files_count'] = $countFiles;
+        $component['size_count'] = $countSize;
+        $component['fixity_success'] = $fixitySuccess;
+        $component['last_fixity_date'] = $lastFixityDate;
 
-      // Add results grouped by department and artwork
-      if (isset($component['department']) && isset($component['artwork']))
-      {
-        $this->results[$component['department']]['results'][$component['artwork']]['results'][] = $component;
+        // Add results grouped by department and artwork
+        if (isset($component['department']) && isset($component['artwork']))
+        {
+          $this->results[$component['department']]['results'][$component['artwork']]['results'][] = $component;
+        }
       }
     }
 
@@ -1014,91 +1042,95 @@ sql;
   protected function videoCharacteristics()
   {
     $this->queryBool->addMust(new \Elastica\Query\Term(array('digitalObject.mediaTypeId' => QubitTerm::VIDEO_ID)));
-    $this->filterEsRangeFacet('from', 'to', 'createdAt', $this->queryBool);
+    $this->filterEsRangeQuery('from', 'to', 'createdAt', $this->queryBool);
     $this->query->setQuery($this->queryBool);
 
-    $resultSet = QubitSearch::getInstance()->index->getType('QubitInformationObject')->search($this->query);
+    $search = QubitSearch::getInstance()->index->getType('QubitInformationObject')->createSearch($this->query);
+    $scroll = new \Elastica\Scroll($search);
 
-    foreach ($resultSet as $hit)
+    foreach ($scroll as $resultSet)
     {
-      $doc = $hit->getData();
-
-      $video = array();
-
-      // TODO? Get data from all the tracks
-      $this->addItemToArray($video, 'filename', $doc['metsData']['filename']);
-      $this->addItemToArray($video, 'part_of', $doc['aipPartOf']);
-      $this->addItemToArray($video, 'size', $doc['metsData']['size']);
-      $this->addItemToArray($video, 'format', $doc['metsData']['mediainfo']['generalTracks'][0]['format']);
-
-      if (isset($doc['metsData']['mediainfo']['videoTracks']))
+      foreach ($resultSet as $hit)
       {
-        $video['video_streams_count'] = count($doc['metsData']['mediainfo']['videoTracks']);
-      }
+        $doc = $hit->getData();
 
-      if (isset($doc['metsData']['mediainfo']['audioTracks']))
-      {
-        $video['audio_streams_count'] = count($doc['metsData']['mediainfo']['audioTracks']);
-      }
+        $video = array();
 
-      // TODO? Get data from all the tracks
-      // PUID ?
-      $this->addItemToArray($video, 'codec_id', $doc['metsData']['mediainfo']['videoTracks'][0]['codecId']);
-      $this->addItemToArray($video, 'codec', $doc['metsData']['mediainfo']['videoTracks'][0]['codec']);
-      $this->addItemToArray($video, 'duration', $doc['metsData']['mediainfo']['videoTracks'][0]['duration']);
-      $this->addItemToArray($video, 'width', $doc['metsData']['mediainfo']['videoTracks'][0]['width']);
-      // Original width ?
-      $this->addItemToArray($video, 'height', $doc['metsData']['mediainfo']['videoTracks'][0]['height']);
-      // Original height ?
-      $this->addItemToArray($video, 'display_aspect_ratio', $doc['metsData']['mediainfo']['videoTracks'][0]['displayAspectRatio']);
-      $this->addItemToArray($video, 'frame_rate', $doc['metsData']['mediainfo']['videoTracks'][0]['frameRate']);
-      // Standard ?
-      $this->addItemToArray($video, 'color_space', $doc['metsData']['mediainfo']['videoTracks'][0]['colorSpace']);
-      $this->addItemToArray($video, 'chroma_subsampling', $doc['metsData']['mediainfo']['videoTracks'][0]['chromaSubsampling']);
-      $this->addItemToArray($video, 'bit_depth', $doc['metsData']['mediainfo']['videoTracks'][0]['bitDepth']);
+        // TODO? Get data from all the tracks
+        $this->addItemToArray($video, 'filename', $doc['metsData']['filename']);
+        $this->addItemToArray($video, 'part_of', $doc['aipPartOf']);
+        $this->addItemToArray($video, 'size', $doc['metsData']['size']);
+        $this->addItemToArray($video, 'format', $doc['metsData']['mediainfo']['generalTracks'][0]['format']);
 
-      // Fron first audio track
-      $this->addItemToArray($video, 'sample_rate', $doc['metsData']['mediainfo']['audioTracks'][0]['samplingRate']);
-      $this->addItemToArray($video, 'compression_mode', $doc['metsData']['mediainfo']['audioTracks'][0]['compressionMode']);
-
-      // Get last fixity check for the file AIP
-      // TODO? Add fixity data to files in ES and update file when fixity checks are added
-      $fixitySuccess = $lastFixityDate = null;
-      if (isset($doc['aipUuid']))
-      {
-        $fixityQuery = new \Elastica\Query;
-        $fixityQueryBool = new \Elastica\Query\BoolQuery;
-        $fixityQueryBool->addMust(new \Elastica\Query\Term(array('aip.uuid' => $doc['aipUuid'])));
-
-        $fixityQuery->setQuery($fixityQueryBool);
-        $fixityQuery->setSort(array('timeCompleted' => 'desc'));
-        $fixityQuery->setLimit(1);
-
-        $fixityResultSet = QubitSearch::getInstance()->index->getType('QubitFixityReport')->search($fixityQuery);
-        $fixityResults = $fixityResultSet->getResults();
-
-        if (count($fixityResults) == 1)
+        if (isset($doc['metsData']['mediainfo']['videoTracks']))
         {
-          $fixityDoc = $fixityResults[0]->getData();
+          $video['video_streams_count'] = count($doc['metsData']['mediainfo']['videoTracks']);
+        }
 
-          // If the last check failed set global fixity status as false
-          if (isset($fixityDoc['success']))
-          {
-            $fixitySuccess = (bool)$fixityDoc['success'];
-          }
+        if (isset($doc['metsData']['mediainfo']['audioTracks']))
+        {
+          $video['audio_streams_count'] = count($doc['metsData']['mediainfo']['audioTracks']);
+        }
 
-          // Update last check date
-          if (isset($fixityDoc['timeCompleted']))
+        // TODO? Get data from all the tracks
+        // PUID ?
+        $this->addItemToArray($video, 'codec_id', $doc['metsData']['mediainfo']['videoTracks'][0]['codecId']);
+        $this->addItemToArray($video, 'codec', $doc['metsData']['mediainfo']['videoTracks'][0]['codec']);
+        $this->addItemToArray($video, 'duration', $doc['metsData']['mediainfo']['videoTracks'][0]['duration']);
+        $this->addItemToArray($video, 'width', $doc['metsData']['mediainfo']['videoTracks'][0]['width']);
+        // Original width ?
+        $this->addItemToArray($video, 'height', $doc['metsData']['mediainfo']['videoTracks'][0]['height']);
+        // Original height ?
+        $this->addItemToArray($video, 'display_aspect_ratio', $doc['metsData']['mediainfo']['videoTracks'][0]['displayAspectRatio']);
+        $this->addItemToArray($video, 'frame_rate', $doc['metsData']['mediainfo']['videoTracks'][0]['frameRate']);
+        // Standard ?
+        $this->addItemToArray($video, 'color_space', $doc['metsData']['mediainfo']['videoTracks'][0]['colorSpace']);
+        $this->addItemToArray($video, 'chroma_subsampling', $doc['metsData']['mediainfo']['videoTracks'][0]['chromaSubsampling']);
+        $this->addItemToArray($video, 'bit_depth', $doc['metsData']['mediainfo']['videoTracks'][0]['bitDepth']);
+
+        // Fron first audio track
+        $this->addItemToArray($video, 'sample_rate', $doc['metsData']['mediainfo']['audioTracks'][0]['samplingRate']);
+        $this->addItemToArray($video, 'compression_mode', $doc['metsData']['mediainfo']['audioTracks'][0]['compressionMode']);
+
+        // Get last fixity check for the file AIP
+        // TODO? Add fixity data to files in ES and update file when fixity checks are added
+        $fixitySuccess = $lastFixityDate = null;
+        if (isset($doc['aipUuid']))
+        {
+          $fixityQuery = new \Elastica\Query;
+          $fixityQueryBool = new \Elastica\Query\BoolQuery;
+          $fixityQueryBool->addMust(new \Elastica\Query\Term(array('aip.uuid' => $doc['aipUuid'])));
+
+          $fixityQuery->setQuery($fixityQueryBool);
+          $fixityQuery->setSort(array('timeCompleted' => 'desc'));
+          $fixityQuery->setSize(1);
+
+          $fixityResultSet = QubitSearch::getInstance()->index->getType('QubitFixityReport')->search($fixityQuery);
+          $fixityResults = $fixityResultSet->getResults();
+
+          if (count($fixityResults) == 1)
           {
-            $lastFixityDate = $fixityDoc['timeCompleted'];
+            $fixityDoc = $fixityResults[0]->getData();
+
+            // If the last check failed set global fixity status as false
+            if (isset($fixityDoc['success']))
+            {
+              $fixitySuccess = (bool)$fixityDoc['success'];
+            }
+
+            // Update last check date
+            if (isset($fixityDoc['timeCompleted']))
+            {
+              $lastFixityDate = $fixityDoc['timeCompleted'];
+            }
           }
         }
+
+        $video['fixity_success'] = $fixitySuccess;
+        $video['fixity_date'] = $lastFixityDate;
+
+        $this->results[] = $video;
       }
-
-      $video['fixity_success'] = $fixitySuccess;
-      $video['fixity_date'] = $lastFixityDate;
-
-      $this->results[] = $video;
     }
   }
 

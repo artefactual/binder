@@ -1,0 +1,23 @@
+<section ng-if="agg.buckets.length > 0" ng-class="{ facet: true, open: !collapsed }">
+
+  <a href ng-click="toggle()">
+    <div class="facet-header">
+      <p>{{ label }}</p>
+    </div>
+  </a>
+
+  <div class="facet-body">
+    <ul>
+      <li ng-class="{ active: isSelected() }">
+        <a href ng-click="select()">All</a>
+      </li>
+      <li ng-repeat="bucket in agg.buckets | orderBy:'count':true" ng-class="{ active: isSelected(bucket.key) }">
+        <a href ng-click="select(bucket.key)">
+          {{ bucket.label }}
+          <span class="facet-count">{{ bucket.doc_count }}</span>
+        </a>
+      </li>
+    </ul>
+  </div>
+
+</section>

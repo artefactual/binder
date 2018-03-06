@@ -77,7 +77,7 @@ class ApiSearchAutocompleteAction extends QubitApiAction
       $query = new \Elastica\Query;
       $query
         ->setSize(3)
-        ->setSort(array($item['field'] => 'asc'))
+        ->setSort(array($item['field'].'.untouched' => 'asc'))
         ->setSource($item['fields'])
         ->setHighlight(array(
             'require_field_match' => true, // Restrict highlighting to matched fields

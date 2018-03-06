@@ -21,15 +21,7 @@ class ApiSearchesBrowseAction extends QubitApiAction
 {
   protected function get($request)
   {
-    $data = array();
-
-    $results = $this->getResults();
-    $data['results'] = $results['results'];
-    $data['facets'] = $results['facets'];
-    $data['total'] = $results['total'];
-    $data['overview'] = $this->getOverview();
-
-    return $data;
+    return $this->getResults();
   }
 
   protected function getResults()
@@ -37,55 +29,17 @@ class ApiSearchesBrowseAction extends QubitApiAction
     // Create query objects
     $query = new \Elastica\Query;
     $queryBool = new \Elastica\Query\BoolQuery;
-    $filterBool = new \Elastica\Filter\BoolFilter;
     $queryBool->addMust(new \Elastica\Query\Term(array('typeId' => sfConfig::get('app_drmc_term_search_id'))));
 
     // Pagination and sorting
     $this->prepareEsPagination($query);
     $this->prepareEsSorting($query, array(
-      'name' => 'name',
+      'name' => 'name.untouched',
       'description' => 'description',
       'createdAt' => 'createdAt',
       'updatedAt' => 'updatedAt',
       'type' => 'scope',
       'user' => 'user.name'));
-
-    // Filter selected facets
-    $this->filterEsFacetQuery('user', 'user.id', $queryBool);
-    $this->filterEsFacetQuery('type', 'scope', $queryBool, 'AND', array('noInteger' => true));
-
-    $this->filterEsRangeFacet('createdFrom', 'createdTo', 'createdAt', $queryBool);
-    $this->filterEsRangeFacet('updatedFrom', 'updatedTo', 'updatedAt', $queryBool);
-
-    // Add facets to the query
-    $this->facetEsQuery('Terms', 'type', 'scope', $query);
-    $this->facetEsQuery('Terms', 'user', 'user.id', $query);
-
-    // Type facet labels
-    $this->typeLabels = array(
-      'aips' => 'AIPs',
-      'works' => 'Artwork records',
-      'technology-records' => 'Supporting technology records',
-      'components' => 'Components',
-      'files' => 'Files');
-
-    $now = new DateTime();
-    $now->setTime(0, 0);
-
-    $dateRanges = array(
-      array('to' => $now->modify('-1 year')->getTimestamp().'000'),
-      array('from' => $now->getTimestamp().'000'),
-      array('from' => $now->modify('+11 months')->getTimestamp().'000'),
-      array('from' => $now->modify('+1 month')->modify('-7 days')->getTimestamp().'000'));
-
-    $this->dateRangesLabels = array(
-      'Older than a year',
-      'From last year',
-      'From last month',
-      'From last week');
-
-    $this->facetEsQuery('Range', 'dateCreated', 'createdAt', $query, array('ranges' => $dateRanges));
-    $this->facetEsQuery('Range', 'dateUpdated', 'updatedAt', $query, array('ranges' => $dateRanges));
 
     // Filter query
     if (isset($this->request->query) && 1 !== preg_match('/^[\s\t\r\n]*$/', $this->request->query))
@@ -103,11 +57,64 @@ class ApiSearchesBrowseAction extends QubitApiAction
       $queryBool->addMust($queryText);
     }
 
-    // Set filter
-    if (0 < count($filterBool->toArray()))
-    {
-      $query->setPostFilter($filterBool);
-    }
+    // Filter selected aggregations
+    $this->filterEsQuery('user', 'user.id', $queryBool);
+    $this->filterEsQuery('type', 'scope', $queryBool, 'AND', array('noInteger' => true));
+
+    $this->filterEsRangeQuery('createdFrom', 'createdTo', 'createdAt', $queryBool);
+    $this->filterEsRangeQuery('updatedFrom', 'updatedTo', 'updatedAt', $queryBool);
+
+    // Type aggregation labels
+    $this->typeLabels = array(
+      'aips' => 'AIPs',
+      'works' => 'Artwork records',
+      'technology-records' => 'Supporting technology records',
+      'components' => 'Components',
+      'files' => 'Files');
+
+    // Add aggregations to the query
+    $query->addAggregation($this->buildEsAgg('Terms', 'type', 'scope'));
+    $query->addAggregation($this->buildEsAgg('Terms', 'user', 'user.id'));
+
+    $now = new DateTime();
+    $now->setTime(0, 0);
+
+    $dateRanges = array(
+      array(
+        'from' => null,
+        'to' => $now->modify('-1 year')->getTimestamp().'000',
+        'key' => 'Older than a year'
+      ),
+      array(
+        'from' => $now->getTimestamp().'000',
+        'to' => null,
+        'key' => 'From last year'
+      ),
+      array(
+        'from' => $now->modify('+11 months')->getTimestamp().'000',
+        'to' => null,
+        'key' => 'From last month'
+      ),
+      array(
+        'from' => $now->modify('+1 month')->modify('-7 days')->getTimestamp().'000',
+        'to' => null,
+        'key' => 'From last week'
+      )
+    );
+
+    $query->addAggregation($this->buildEsAgg(
+      'DateRange',
+      'dateCreated',
+      'createdAt',
+      array('ranges' => $dateRanges)
+    ));
+
+    $query->addAggregation($this->buildEsAgg(
+      'DateRange',
+      'dateUpdated',
+      'updatedAt',
+      array('ranges' => $dateRanges)
+    ));
 
     // Assign query
     $query->setQuery($queryBool);
@@ -135,13 +142,12 @@ class ApiSearchesBrowseAction extends QubitApiAction
       $data['results'][] = $search;
     }
 
-    // Facets
-    $facets = $resultSet->getFacets();
-    $this->populateFacets($facets);
-    $data['facets'] = $facets;
+    $aggs = $resultSet->getAggregations();
+    $this->formatAggs($aggs);
 
-    // Total this
+    $data['aggs'] = $aggs;
     $data['total'] = $resultSet->getTotalHits();
+    $data['overview'] = $this->getOverview();
 
     return $data;
   }
@@ -152,21 +158,21 @@ class ApiSearchesBrowseAction extends QubitApiAction
     $queryBool = new \Elastica\Query\BoolQuery;
     $queryBool->addMust(new \Elastica\Query\Term(array('typeId' => sfConfig::get('app_drmc_term_search_id'))));
 
-    $this->facetEsQuery('Terms', 'type', 'scope', $query);
-
+    $query->addAggregation($this->buildEsAgg('Terms', 'type', 'scope'));
     $query->setQuery($queryBool);
     $query->setSort(array('createdAt' => 'desc'));
+    $query->setSize(1);
 
     $resultSet = QubitSearch::getInstance()->index->getType('QubitSavedQuery')->search($query);
-    $facets = $resultSet->getFacets();
-    $this->populateFacets($facets);
+    $aggs = $resultSet->getAggregations();
+    $this->formatAggs($aggs);
 
     $results = array();
 
     // Totals by entity
-    foreach ($facets['type']['terms'] as $facet)
+    foreach ($aggs['type']['buckets'] as $bucket)
     {
-      $results['counts'][$facet['label'].' searches'] = $facet['count'];
+      $results['counts'][$bucket['label'].' searches'] = $bucket['doc_count'];
     }
 
     // Total searches
@@ -175,7 +181,7 @@ class ApiSearchesBrowseAction extends QubitApiAction
     // Last created
     $esResullts = $resultSet->getResults();
 
-    if (count($esResullts) >0)
+    if (count($esResullts) == 1)
     {
       $lastCreated = $esResullts[0]->getData();
 
@@ -192,12 +198,13 @@ class ApiSearchesBrowseAction extends QubitApiAction
 
     $query->setQuery($queryBool);
     $query->setSort(array('updatedAt' => 'desc'));
+    $query->setSize(1);
 
     $resultSet = QubitSearch::getInstance()->index->getType('QubitSavedQuery')->search($query);
 
     $esResullts = $resultSet->getResults();
 
-    if (count($esResullts) >0)
+    if (count($esResullts) == 1)
     {
       $lastUpdated = $esResullts[0]->getData();
 
@@ -210,24 +217,22 @@ class ApiSearchesBrowseAction extends QubitApiAction
     return $results;
   }
 
-  protected function getFacetLabel($name, $id)
+  protected function getAggLabel($name, $id)
   {
-    if ($name === 'user')
+    switch ($name)
     {
-      if (null !== $item = QubitUser::getById($id))
-      {
-        return $item->getUsername(array('cultureFallback' => true));
-      }
-    }
+      case 'type':
+        return $this->typeLabels[$id];
 
-    if ($name === 'type')
-    {
-      return $this->typeLabels[$id];
-    }
+        break;
 
-    if ($name === 'dateCreated' || $name === 'dateUpdated')
-    {
-      return $this->dateRangesLabels[$id];
+      case 'user':
+        if (null !== $item = QubitUser::getById($id))
+        {
+          return $item->getUsername(array('cultureFallback' => true));
+        }
+
+        break;
     }
   }
 }

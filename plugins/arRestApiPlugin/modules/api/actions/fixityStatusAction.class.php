@@ -28,18 +28,9 @@ class ApiFixityStatusAction extends QubitApiAction
   {
     // Last reports
     $query = new \Elastica\Query;
-    $queryBool = new \Elastica\Query\BoolQuery;
-
-    $queryAll = new \Elastica\Query\MatchAll;
-    $filter = new \Elastica\Filter\Exists('timeCompleted');
-    $filteredQuery = new \Elastica\Query\Filtered($queryAll, $filter);
-
-    $queryBool->addMust($filteredQuery);
-
-    $this->prepareEsPagination($query);
+    $query->setQuery(new \Elastica\Query\Exists('timeCompleted'));
     $query->setSort(array('timeStarted' => 'desc'));
-
-    $query->setQuery($queryBool);
+    $this->prepareEsPagination($query);
 
     $resultSet = QubitSearch::getInstance()->index->getType('QubitFixityReport')->search($query);
 

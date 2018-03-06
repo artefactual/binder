@@ -99,42 +99,6 @@
       }
     });
 
-
-    /**
-     * Facets
-     */
-
-    $scope.getTermLabel = function (facet, id) {
-      if (typeof $scope.data === undefined) {
-        return id;
-      }
-      for (var term in $scope.data.facets[facet].terms) {
-        if (parseInt($scope.data.facets[facet].terms[term].term) === parseInt(id)) {
-          return $scope.data.facets[facet].terms[term].label;
-        }
-      }
-    };
-
-    $scope.getSizeRangeLabel = function (from, to) {
-      if (typeof from !== 'undefined' && typeof to !== 'undefined') {
-        return 'Between ' + $filter('UnitFilter')(from) + ' and ' + $filter('UnitFilter')(to);
-      }
-      if (typeof from !== 'undefined') {
-        return 'Bigger than ' + $filter('UnitFilter')(from);
-      }
-      if (typeof to !== 'undefined') {
-        return 'Smaller than ' + $filter('UnitFilter')(to);
-      }
-    };
-
-    $scope.getDateRangeLabel = function (facet, from, to) {
-      for (var range in $scope.data.facets[facet].ranges) {
-        if ($scope.data.facets[facet].ranges[range].from === from && $scope.data.facets[facet].ranges[range].to === to) {
-          return $scope.data.facets[facet].ranges[range].label;
-        }
-      }
-    };
-
     $scope.updateResults = function () {
       search();
     };
