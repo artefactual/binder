@@ -26,25 +26,31 @@ class ApiSummaryMediaFilesizeByYearAction extends QubitApiAction
 
   protected function getResults()
   {
-    // Create query objects
     $query = new \Elastica\Query;
-    $queryBool = new \Elastica\Query\BoolQuery;
+    $query->setQuery(new \Elastica\Query\MatchAll);
 
-    // Get all information objects
-    $queryBool->addMust(new \Elastica\Query\MatchAll);
+    // We don't need details, just aggregation results
+    $query->setSize(0);
 
-    // Assign query
-    $query->setQuery($queryBool);
+    // Create nested aggregation to get average size by year,
+    // extend bounds to get results until the current year;
+    // a min value is required in the bounds but it doesn't
+    // reduce the bounds if there are results before it.
+    $currentYear = (int)date('Y');
+    $aggName = 'collection_year_file_stats';
+    $aggOptions = array(
+      'interval' => 1,
+      'params' => array(
+        array(
+          'name' => 'extended_bounds',
+          'value' => array('min' => $currentYear, 'max' => $currentYear)
+        )
+      )
+    );
+    $agg = $this->buildEsAgg('Histogram', $aggName, 'partOf.year_collected', $aggOptions);
+    $agg->addAggregation($this->buildEsAgg('Avg', 'size', 'sizeOnDisk'));
+    $query->addAggregation($agg);
 
-    // We don't need details, just facet results
-    $query->setLimit(0);
-
-    // Use a term stats facet to calculate total bytes used per media category
-    $facetName = 'collection_year_file_stats';
-    $facetOptions = array('valueField' => 'sizeOnDisk', 'setSize' => 1000);
-    $this->facetEsQuery('TermsStats', $facetName, 'partOf.year_collected', $query, $facetOptions);
-
-    // Return empty results if search fails
     try
     {
       $resultSet = QubitSearch::getInstance()->index->getType('QubitAip')->search($query);
@@ -54,67 +60,15 @@ class ApiSummaryMediaFilesizeByYearAction extends QubitApiAction
       return array();
     }
 
-    $facets = $resultSet->getFacets();
-
-    foreach($facets[$facetName]['terms'] as $index => $term)
-    {
-      // Take note of average
-      $average = $term['mean'];
-      $facets[$facetName]['terms'][$index]['average'] = $average;
-
-      // Convert millisecond timestamp to human-readable
-      $facets[$facetName]['terms'][$index]['year'] = intval($term['term']);
-
-      // Strip out extra data
-      foreach(array('count', 'total_count', 'min', 'max', 'mean', 'term', 'total') as $element)
-      {
-        unset($facets[$facetName]['terms'][$index][$element]);
-      }
-    }
-
-    // Sort by year
-    function compare_year($a, $b)
-    {
-      return $a['year'] > $b['year'];
-    }
-
-    usort($facets[$facetName]['terms'], 'compare_year');
-
-    // Add missing years: ElasticSearch 0.9 facets
-    // don't include intervals without data, it can be solved
-    // using aggregations in Elasticsearch 1.x.
+    $agg = $resultSet->getAggregation($aggName);
     $results = array();
-    foreach($facets[$facetName]['terms'] as $result)
+
+    foreach($agg['buckets'] as $bucket)
     {
-      if (isset($previousResult))
-      {
-        // Add missing years in between
-        while ($previousResult['year'] + 1 < $result['year'])
-        {
-          $missingResult = array();
-          $missingResult['year'] = $previousResult['year'] + 1;
-          $missingResult['average'] = 0;
-
-          $results[] = $missingResult;
-          $previousResult = $missingResult;
-        }
-      }
-
-      $results[] = $result;
-      $previousResult = $result;
-    }
-
-    $currentYear = (integer)substr(date('Y-m-d'), 0, 4);
-
-    // Add missing years at the end
-    while ($currentYear - $previousResult['year'] > 0)
-    {
-      $missingResult = array();
-      $missingResult['year'] = $previousResult['year'] + 1;
-      $missingResult['average'] = 0;
-
-      $results[] = $missingResult;
-      $previousResult = $missingResult;
+      $results[] = array(
+        'year' => $bucket['key'],
+        'average' => $bucket['size']['value'] ? $bucket['size']['value'] : 0
+      );
     }
 
     return $results;

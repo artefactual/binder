@@ -21,12 +21,7 @@ class ApiInformationObjectsTechnologyRecordsBrowseAction extends QubitApiAction
 {
   protected function get($request)
   {
-    $results = $this->getResults();
-    $data['results'] = $results['results'];
-    $data['facets'] = $results['facets'];
-    $data['total'] = $results['total'];
-
-    return $data;
+    return $this->getResults();
   }
 
   protected function getResults()
@@ -34,7 +29,6 @@ class ApiInformationObjectsTechnologyRecordsBrowseAction extends QubitApiAction
     // Create query objects
     $query = new \Elastica\Query;
     $queryBool = new \Elastica\Query\BoolQuery;
-    $filterBool = new \Elastica\Filter\BoolFilter;
 
     // Pagination and sorting
     $this->prepareEsPagination($query);
@@ -72,44 +66,106 @@ class ApiInformationObjectsTechnologyRecordsBrowseAction extends QubitApiAction
       $queryBool->addMust($queryText);
     }
 
-    // Filter selected facets
-    $this->filterEsRangeFacet('ingestedFrom', 'ingestedTo', 'aips.createdAt', $queryBool);
+    // Filter materials total size using a Painless script to calculate total size.
+    // An aggregation can't be made over an scripted field so it requires to do the
+    // total size calculation twice, for the aggregation and for the query.
+    if ((isset($this->request->totalSizeFrom) && ctype_digit($this->request->totalSizeFrom))
+      || (isset($this->request->totalSizeTo) && ctype_digit($this->request->totalSizeTo)))
+    {
+      $scriptCode = <<<Painless
+double total = 0;
+for (size in doc['aips.sizeOnDisk'])
+  total += size;
+if (params.containsKey('from') && params.containsKey('to'))
+  total > params.from && total < params.to;
+else if (params.containsKey('from'))
+  total > params.from;
+else if (params.containsKey('to'))
+  total < params.to;
+Painless;
 
-    $this->filterEsFacetQuery('format', 'aips.digitalObjects.metsData.format.name', $queryBool, 'AND', array('noInteger' => true));
-    $this->filterEsFacetQuery('videoCodec', 'aips.digitalObjects.metsData.mediainfo.videoTracks.codec', $queryBool, 'AND', array('noInteger' => true));
-    $this->filterEsFacetQuery('audioCodec', 'aips.digitalObjects.metsData.mediainfo.audioTracks.codec', $queryBool, 'AND', array('noInteger' => true));
-    $this->filterEsFacetQuery('resolution', 'aips.digitalObjects.metsData.mediainfo.videoTracks.resolution', $queryBool);
-    $this->filterEsFacetQuery('chromaSubSampling', 'aips.digitalObjects.metsData.mediainfo.videoTracks.chromaSubsampling', $queryBool, 'AND', array('noInteger' => true));
-    $this->filterEsFacetQuery('colorSpace', 'aips.digitalObjects.metsData.mediainfo.videoTracks.colorSpace', $queryBool, 'AND', array('noInteger' => true));
-    $this->filterEsFacetQuery('sampleRate', 'aips.digitalObjects.metsData.mediainfo.audioTracks.samplingRate', $queryBool);
-    $this->filterEsFacetQuery('bitDepth', 'aips.digitalObjects.metsData.mediainfo.videoTracks.bitDepth', $queryBool);
+      $script = new \Elastica\Script\Script($scriptCode);
 
-    // Add facets to the query
-    $this->facetEsQuery('Terms', 'format', 'aips.digitalObjects.metsData.format.name', $query);
-    $this->facetEsQuery('Terms', 'videoCodec', 'aips.digitalObjects.metsData.mediainfo.videoTracks.codec', $query);
-    $this->facetEsQuery('Terms', 'audioCodec', 'aips.digitalObjects.metsData.mediainfo.audioTracks.codec', $query);
-    $this->facetEsQuery('Terms', 'resolution', 'aips.digitalObjects.metsData.mediainfo.videoTracks.resolution', $query);
-    $this->facetEsQuery('Terms', 'chromaSubSampling', 'aips.digitalObjects.metsData.mediainfo.videoTracks.chromaSubsampling', $query);
-    $this->facetEsQuery('Terms', 'colorSpace', 'aips.digitalObjects.metsData.mediainfo.videoTracks.colorSpace', $query);
-    $this->facetEsQuery('Terms', 'sampleRate', 'aips.digitalObjects.metsData.mediainfo.audioTracks.samplingRate', $query);
-    $this->facetEsQuery('Terms', 'bitDepth', 'aips.digitalObjects.metsData.mediainfo.videoTracks.bitDepth', $query);
+      if (isset($this->request->totalSizeFrom))
+      {
+        $script->setParam('from', (double)$this->request->totalSizeFrom);
+      }
+
+      if (isset($this->request->totalSizeTo))
+      {
+        $script->setParam('to', (double)$this->request->totalSizeTo);
+      }
+
+      $scriptQuery = new \Elastica\Query\Script($script);
+
+      $queryBool->addMust($scriptQuery);
+    }
+
+    // Filter other selected aggregations
+    $this->filterEsRangeQuery('ingestedFrom', 'ingestedTo', 'aips.createdAt', $queryBool);
+
+    $this->filterEsQuery('format', 'aips.digitalObjects.metsData.format.name', $queryBool, 'AND', array('noInteger' => true));
+    $this->filterEsQuery('videoCodec', 'aips.digitalObjects.metsData.mediainfo.videoTracks.codec', $queryBool, 'AND', array('noInteger' => true));
+    $this->filterEsQuery('audioCodec', 'aips.digitalObjects.metsData.mediainfo.audioTracks.codec', $queryBool, 'AND', array('noInteger' => true));
+    $this->filterEsQuery('resolution', 'aips.digitalObjects.metsData.mediainfo.videoTracks.resolution', $queryBool);
+    $this->filterEsQuery('chromaSubSampling', 'aips.digitalObjects.metsData.mediainfo.videoTracks.chromaSubsampling', $queryBool, 'AND', array('noInteger' => true));
+    $this->filterEsQuery('colorSpace', 'aips.digitalObjects.metsData.mediainfo.videoTracks.colorSpace', $queryBool, 'AND', array('noInteger' => true));
+    $this->filterEsQuery('sampleRate', 'aips.digitalObjects.metsData.mediainfo.audioTracks.samplingRate', $queryBool);
+    $this->filterEsQuery('bitDepth', 'aips.digitalObjects.metsData.mediainfo.videoTracks.bitDepth', $queryBool);
+
+    // Add aggregations to the query
+    $query->addAggregation($this->buildEsAgg('Terms', 'format', 'aips.digitalObjects.metsData.format.name'));
+    $query->addAggregation($this->buildEsAgg('Terms', 'videoCodec', 'aips.digitalObjects.metsData.mediainfo.videoTracks.codec'));
+    $query->addAggregation($this->buildEsAgg('Terms', 'audioCodec', 'aips.digitalObjects.metsData.mediainfo.audioTracks.codec'));
+    $query->addAggregation($this->buildEsAgg('Terms', 'resolution', 'aips.digitalObjects.metsData.mediainfo.videoTracks.resolution'));
+    $query->addAggregation($this->buildEsAgg('Terms', 'chromaSubSampling', 'aips.digitalObjects.metsData.mediainfo.videoTracks.chromaSubsampling'));
+    $query->addAggregation($this->buildEsAgg('Terms', 'colorSpace', 'aips.digitalObjects.metsData.mediainfo.videoTracks.colorSpace'));
+    $query->addAggregation($this->buildEsAgg('Terms', 'sampleRate', 'aips.digitalObjects.metsData.mediainfo.audioTracks.samplingRate'));
+    $query->addAggregation($this->buildEsAgg('Terms', 'bitDepth', 'aips.digitalObjects.metsData.mediainfo.videoTracks.bitDepth'));
 
     $now = new DateTime();
     $now->setTime(0, 0);
 
     $dateRanges = array(
-      array('to' => $now->modify('-1 year')->getTimestamp().'000'),
-      array('from' => $now->getTimestamp().'000'),
-      array('from' => $now->modify('+11 months')->getTimestamp().'000'),
-      array('from' => $now->modify('+1 month')->modify('-7 days')->getTimestamp().'000'));
+      array(
+        'from' => null,
+        'to' => $now->modify('-1 year')->getTimestamp().'000',
+        'key' => 'Older than a year'
+      ),
+      array(
+        'from' => $now->getTimestamp().'000',
+        'to' => null,
+        'key' => 'From last year'
+      ),
+      array(
+        'from' => $now->modify('+11 months')->getTimestamp().'000',
+        'to' => null,
+        'key' => 'From last month'
+      ),
+      array(
+        'from' => $now->modify('+1 month')->modify('-7 days')->getTimestamp().'000',
+        'to' => null,
+        'key' => 'From last week'
+      )
+    );
 
-    $this->dateRangesLabels = array(
-      'Older than a year',
-      'From last year',
-      'From last month',
-      'From last week');
+    $query->addAggregation($this->buildEsAgg(
+      'DateRange',
+      'dateIngested',
+      'aips.createdAt',
+      array('ranges' => $dateRanges)
+    ));
 
-    $this->facetEsQuery('Range', 'dateIngested', 'aips.createdAt', $query, array('ranges' => $dateRanges));
+    // Add aggregation for materials total size using a Painless script to
+    // calculate total size. An aggregation can't be made over an scripted
+    // field so it requires to do the total size calculation twice, for the
+    // aggregation and for the query.
+    $scriptCode = <<<Painless
+double total = 0;
+for (size in doc['aips.sizeOnDisk'])
+  total += size;
+return total;
+Painless;
 
     $sizeRanges = array(
       array('from' => null, 'to' => 512000, 'key' => 'Smaller than 500 KB'),
@@ -117,10 +173,18 @@ class ApiInformationObjectsTechnologyRecordsBrowseAction extends QubitApiAction
       array('from' => 1048576, 'to' => 2097152, 'key' => 'Between 1 MB and 2 MB'),
       array('from' => 2097152, 'to' => 5242880, 'key' => 'Between 2 MB and 5 MB'),
       array('from' => 5242880, 'to' => 10485760, 'key' => 'Between 5 MB and 10 MB'),
-      array('from' => 10485760, 'to' => null, 'key' => 'Bigger than 10 MB'));
+      array('from' => 10485760, 'to' => null, 'key' => 'Bigger than 10 MB')
+    );
 
-    // Range aggregation with script file for AIPs total size
-    $this->addAggrToEsQuery('Range', 'totalSize', null, $query, array('ranges' => $sizeRanges, 'scriptFile' => 'binder_aips_total_size_aggr'));
+    $query->addAggregation($this->buildEsAgg(
+      'Range',
+      'totalSize',
+      null,
+      array(
+        'ranges' => $sizeRanges,
+        'script' => $scriptCode
+      )
+    ));
 
     // Limit fields
     $query->setSource(array(
@@ -142,37 +206,7 @@ class ApiInformationObjectsTechnologyRecordsBrowseAction extends QubitApiAction
       'creators',
       'aips'));
 
-    // Filter materials total size, must be a filter to use scripts and
-    // must be a filtered query so it happens before faceting
-    if ((isset($this->request->totalSizeFrom) && ctype_digit($this->request->totalSizeFrom))
-      || (isset($this->request->totalSizeTo) && ctype_digit($this->request->totalSizeTo)))
-    {
-      $script = new \Elastica\Script('binder_aips_total_size_filter');
-
-      if (isset($this->request->totalSizeFrom))
-      {
-        $script->setParam('from', (double)$this->request->totalSizeFrom);
-      }
-
-      if (isset($this->request->totalSizeTo))
-      {
-        $script->setParam('to', (double)$this->request->totalSizeTo);
-      }
-
-      $scriptFilter = new \Elastica\Filter\Script($script);
-
-      $query->setQuery($filteredQuery);
-    }
-    else
-    {
-      $query->setQuery($queryBool);
-    }
-
-    // Set filter
-    if (0 < count($filterBool->toArray()))
-    {
-      $query->setPostFilter($filterBool);
-    }
+    $query->setQuery($queryBool);
 
     $resultSet = QubitSearch::getInstance()->index->getType('QubitInformationObject')->search($query);
 
@@ -197,26 +231,20 @@ class ApiInformationObjectsTechnologyRecordsBrowseAction extends QubitApiAction
       $results[$hit->getId()] = $result;
     }
 
-    $facets = $resultSet->getFacets();
-    $aggregations = $resultSet->getAggregations();
-    $this->populateFacets($facets, $aggregations);
+    $aggs = $resultSet->getAggregations();
+    $this->formatAggs($aggs);
 
     return
       array(
         'total' => $resultSet->getTotalHits(),
-        'facets' => $facets,
+        'aggs' => $aggs,
         'results' => $results);
   }
 
-  protected function getFacetLabel($name, $id)
+  protected function getAggLabel($name, $id)
   {
     switch ($name)
     {
-      case 'dateIngested':
-        return $this->dateRangesLabels[$id];
-
-        break;
-
       case 'format':
       case 'videoCodec':
       case 'audioCodec':

@@ -26,7 +26,6 @@ class ApiSummaryArtworkByDateAction extends QubitApiAction
 
   protected function getResults()
   {
-    // Create query object
     $query = new \Elastica\Query;
 
     // Get all artwork records
@@ -36,17 +35,65 @@ class ApiSummaryArtworkByDateAction extends QubitApiAction
       sfConfig::get('app_drmc_lod_artwork_record_id')
     );
 
-    // Assign query
     $query->setQuery($queryMatch);
 
-    // We don't need details, just facet results
-    $query->setLimit(0);
+    // We don't need details, just aggregation results
+    $query->setSize(0);
 
-    // Add facets to the months in which artwork records were collected and created
-    $this->facetEsQuery('DateHistogram', 'collection', 'tmsObject.dateCollected', $query, array('interval' => 'year'));
-    $this->facetEsQuery('DateHistogram', 'creation', 'createdAt', $query, array('interval' => 'month'));
+    // Add aggregations to get the count and total of artworks
+    // per year or month by creation and collected date
+    $now = round(microtime(true) * 1000);
+    $aggs = array(
+      'collection' => array(
+        'field' => 'tmsObject.dateCollected',
+        'interval' => 'year',
+        'format' => 'yyyy'
+      ),
+      'creation' => array(
+        'field' => 'createdAt',
+        'interval' => 'month',
+        'format' => 'yyyy-MM'
+      )
+    );
 
-    // Return empty results if search fails
+    foreach ($aggs as $name => $options)
+    {
+      $aggOptions = array(
+        'interval' => $options['interval'],
+        'params' => array(
+          array(
+            'name' => 'extended_bounds',
+            'value' => array( 'min' => $now, 'max' => $now)
+          ),
+          array(
+            'name' => 'format',
+            'value' => $options['format']
+          )
+        )
+      );
+      $agg = $this->buildEsAgg('DateHistogram', $name, $options['field'], $aggOptions);
+      $query->addAggregation($agg);
+    }
+
+    // Cumulative sum aggregation to calculate running totals.
+    // Elastica doesn't include a CumulativeSum aggregation,
+    // therefore we modify the raw query adding the nested aggs.
+    $cumulativeAgg = array(
+      'total' => array(
+        'cumulative_sum' => array(
+          'buckets_path' => '_count'
+        )
+      )
+    );
+
+    $rawQuery = $query->toArray();
+    foreach ($aggs as $name => $options)
+    {
+      $rawQuery['aggs'][$name]['aggs'] = $cumulativeAgg;
+    }
+
+    $query->setRawQuery($rawQuery);
+
     try
     {
       $resultSet = QubitSearch::getInstance()->index->getType('QubitInformationObject')->search($query);
@@ -59,127 +106,25 @@ class ApiSummaryArtworkByDateAction extends QubitApiAction
       );
     }
 
-    $facets = $resultSet->getFacets();
-
-    // Convert timestamps and calculate running total.
-    // Add missing intervals: ElasticSearch 0.9 facets
-    // don't include intervals without data, it can be solved
-    // using aggregations in Elasticsearch 1.x.
     $results = array();
-    foreach ($facets as $facetName => $facet)
+
+    foreach ($aggs as $name => $options)
     {
-      $total = 0;
+      $agg = $resultSet->getAggregation($name);
+      $aggResults = array();
 
-      foreach ($facet['entries'] as $entry)
+      foreach ($agg['buckets'] as $bucket)
       {
-        // Calculate running total
-        $total += $entry['count'];
-
-        // Create result from entry
-        $result = array();
-        $result['total'] = $total;
-        $result['count'] = $entry['count'];
-
-        // Convert millisecond timestamps to years and months
-        $date = date('Y-m-d', $entry['time'] / 1000);
-        $result['year'] = (integer)substr($date, 0, 4);
-
-        if ($facetName == 'creation')
-        {
-          $result['month'] = (integer)substr($date, 5, 2);
-
-          if (isset($previousResult))
-          {
-            // Add missing months in between to creation results
-            while (($result['year'] === $previousResult['year'] &&
-              $result['month'] - $previousResult['month'] > 1) ||
-              $result['year'] - $previousResult['year'] > 1 ||
-              ($result['year'] - $previousResult['year'] === 1 &&
-              $result['month'] - $previousResult['month'] !== -11))
-            {
-              $missingResult = array();
-              $missingResult['total'] = $previousResult['total'];
-              $missingResult['count'] = 0;
-
-              if ($previousResult['month'] == 12)
-              {
-                $missingResult['year'] = $previousResult['year'] + 1;
-                $missingResult['month'] = 1;
-              }
-              else
-              {
-                $missingResult['year'] = $previousResult['year'];
-                $missingResult['month'] = $previousResult['month'] + 1;
-              }
-
-              $results[$facetName][] = $missingResult;
-              $previousResult = $missingResult;
-            }
-          }
-        }
-        else if (isset($previousResult))
-        {
-          // Add missing years in between to collection results
-          while ($result['year'] - $previousResult['year'] > 1)
-          {
-            $missingResult = array();
-            $missingResult['total'] = $previousResult['total'];
-            $missingResult['count'] = 0;
-            $missingResult['year'] = $previousResult['year'] + 1;
-
-            $results[$facetName][] = $missingResult;
-            $previousResult = $missingResult;
-          }
-        }
-
-        $results[$facetName][] = $result;
-        $previousResult = $result;
+        $yearMonth = split('-', $bucket['key_as_string']);
+        $aggResults[] = array(
+          'year' => $yearMonth[0],
+          'month' => ltrim($yearMonth[1], '0'),
+          'count' => $bucket['doc_count'],
+          'total' => $bucket['total']['value']
+        );
       }
 
-      $today = date('Y-m-d');
-      $currentYear = (integer)substr($today, 0, 4);
-
-      if ($facetName == 'creation')
-      {
-        $currentMonth = (integer)substr($today, 5, 2);
-
-        // Add missing months at the end to creation results
-        while ($currentYear > $previousResult['year'] ||
-          $currentMonth > $previousResult['month'])
-        {
-          $missingResult = array();
-          $missingResult['total'] = $previousResult['total'];
-          $missingResult['count'] = 0;
-
-          if ($previousResult['month'] == 12)
-          {
-            $missingResult['year'] = $previousResult['year'] + 1;
-            $missingResult['month'] = 1;
-          }
-          else
-          {
-            $missingResult['year'] = $previousResult['year'];
-            $missingResult['month'] = $previousResult['month'] + 1;
-          }
-
-          $results[$facetName][] = $missingResult;
-          $previousResult = $missingResult;
-        }
-      }
-      else
-      {
-        // Add missing years at the end to collection results
-        while ($currentYear - $previousResult['year'] > 0)
-        {
-          $missingResult = array();
-          $missingResult['total'] = $previousResult['total'];
-          $missingResult['count'] = 0;
-          $missingResult['year'] = $previousResult['year'] + 1;
-
-          $results[$facetName][] = $missingResult;
-          $previousResult = $missingResult;
-        }
-      }
+      $results[$name] = $aggResults;
     }
 
     return $results;

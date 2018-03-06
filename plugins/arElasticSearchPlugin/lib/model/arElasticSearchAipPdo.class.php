@@ -233,7 +233,7 @@ class arElasticSearchAipPdo
 
       if (null !== $yearCollected = $this->getPartOfYearCollected($this->part_of))
       {
-        $serialized['partOf']['year_collected'] = $yearCollected;
+        $serialized['partOf']['year_collected'] = (int)$yearCollected;
       }
 
       if (0 < count($departments = $this->getPartOfDepartments()))

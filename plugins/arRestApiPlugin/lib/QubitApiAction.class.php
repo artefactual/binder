@@ -108,63 +108,9 @@ class QubitAPIAction extends sfAction
   }
 
   /**
-   * Filter out selected facets. It uses \Elastica\Filter instead of
-   * \Elastica\Query because the former happens after faceting while the
-   * latter happens before faceting.
+   * Filter out selected aggregations.
    */
-  protected function filterEsFacetFilter($name, $field, \Elastica\Filter\BoolFilter &$filterBool, $operator = 'AND', array $options = array())
-  {
-    if (!isset($this->request->$name))
-    {
-      return;
-    }
-
-    // Ensure type array
-    $this->request->$name = (array) $this->request->$name;
-
-    // Check type of the elements in the array
-    if (!$options['noInteger'])
-    {
-      foreach ($this->request->$name as $item)
-      {
-        if (true !== ctype_digit($item))
-        {
-          return;
-        }
-      }
-    }
-
-    $filter = new \Elastica\Filter\Terms;
-    $filter->setTerms($field, $this->request->$name);
-
-    switch (strtolower($operator))
-    {
-      case 'or':
-      case 'should':
-        $filterBool->addShould($filter);
-
-        break;
-
-      case 'nor':
-      case 'not':
-      case 'must_not':
-        $filterBool->addMustNot($filter);
-
-        break;
-
-      case 'and':
-      case 'must':
-      default:
-        $filterBool->addMust($filter);
-    }
-  }
-
-  /**
-   * Filter out selected facets. It uses \Elastica\Query instead of
-   * \Elastica\Filter because the later happens after faceting while the
-   * former happens before faceting.
-   */
-  protected function filterEsFacetQuery($name, $field, \Elastica\Query\BoolQuery &$queryBool, $operator = 'AND', array $options = array())
+  protected function filterEsQuery($name, $field, \Elastica\Query\BoolQuery &$queryBool, $operator = 'AND', array $options = array())
   {
     if (!isset($this->request->$name))
     {
@@ -211,7 +157,7 @@ class QubitAPIAction extends sfAction
     }
   }
 
-  protected function filterEsRangeFacet($from, $to, $field, \Elastica\Query\BoolQuery &$queryBool, array $options = array())
+  protected function filterEsRangeQuery($from, $to, $field, \Elastica\Query\BoolQuery &$queryBool, array $options = array())
   {
     if (!isset($this->request->$from) && !isset($this->request->$to))
     {
@@ -239,18 +185,27 @@ class QubitAPIAction extends sfAction
   {
     $limit = empty($limit) ? sfConfig::get('app_hits_per_page', 10) : $limit;
     $limit = $this->request->getGetParameter('limit', $limit);
-    if ($limit > 100)
+    if (!ctype_digit($limit) || $limit > 100)
     {
       $limit = 100;
     }
 
-    $query->setSize($limit);
-
-    // Skip
+    $skip = 0;
     if (isset($this->request->skip) && ctype_digit($this->request->skip))
     {
-      $query->setFrom($this->request->skip);
+      $skip = $this->request->skip;
     }
+
+    // Avoid pagination over 10,000 records
+    if ((int)$skip + (int)$limit > 10000)
+    {
+      // Return 400 response with error message
+      $message = $this->context->i18n->__("Pagination limit reached. To avoid using vast amounts of memory, Binder limits pagination to 10,000 records. Please, narrow down your results.");
+      throw new QubitApiBadRequestException($message);
+    }
+
+    $query->setFrom($skip);
+    $query->setSize($limit);
   }
 
   protected function prepareEsSorting(\Elastica\Query &$query, $fields = array(), $default = array())
@@ -282,82 +237,44 @@ class QubitAPIAction extends sfAction
     $query->setSort(array($fields[$this->request->sort] => $sortDirection));
   }
 
-  protected function facetEsQuery($facetType, $name, $field, \Elastica\Query &$query, array $options = array())
-  {
-    $className = '\\Elastica\\Facet\\'.$facetType;
-
-    $facet = new $className($name);
-
-    if ($facetType != 'DateHistogram' && $facetType != 'Range')
-    {
-      $setSize = (isset($options['setSize'])) ? $options['setSize'] : 10;
-      $facet->setSize($setSize);
-    }
-
-    switch ($facetType)
-    {
-      case 'Terms':
-        $facet->setField($field);
-
-        break;
-
-      case 'TermsStats':
-        $facet->setKeyField($field);
-        $facet->setValueField($options['valueField']);
-
-        break;
-
-      case 'DateHistogram':
-        $facet->setField($field);
-        $facet->setInterval($options['interval']);
-
-        if (isset($options['valueField']))
-        {
-          $facet->setKeyValueFields($field, $options['valueField']);
-        }
-
-        // As dates are stored as UTC, adjust to local timezone
-        $timezoneOffsetHours = date('Z') / 60 / 60; // local timezone offset from UTC, in hours
-
-        // Adjust for daylight saving's time
-        if (date('I'))
-        {
-          $timezoneOffsetHours += ($timezoneOffsetHours > 0) ? 1 : -1;
-        }
-
-        $facet->setParam('post_zone', 0 - $timezoneOffsetHours);
-
-        break;
-
-      case 'Range':
-        $facet->setField($field);
-        $facet->setRanges($options['ranges']);
-
-        break;
-
-    }
-
-    $query->addFacet($facet);
-  }
-
-  protected function addAggrToEsQuery($aggrType, $name, $field, \Elastica\Query &$query, array $options = array())
+  protected function buildEsAgg($aggrType, $name, $field, array $options = array())
   {
     $className = '\\Elastica\\Aggregation\\'.$aggrType;
     $aggr = new $className($name);
+
+    if ($aggrType == 'Terms')
+    {
+      $setSize = (isset($options['setSize'])) ? $options['setSize'] : 10;
+      $aggr->setSize($setSize);
+    }
 
     if (isset($field))
     {
       $aggr->setField($field);
     }
-    else if (isset($options['scriptFile']))
+    else if (isset($options['script']))
     {
-      $scriptFile = new \Elastica\ScriptFile($options['scriptFile']);
-      $aggr->setScript($scriptFile);
+      $script = new \Elastica\Script\Script($options['script']);
+      $aggr->setScript($script);
+    }
+
+    if (isset($options['interval']))
+    {
+      $aggr->setInterval($options['interval']);
+    }
+
+    if (isset($options['params']))
+    {
+      foreach ($options['params'] as $param)
+      {
+        $aggr->setParam($param['name'], $param['value']);
+      }
     }
 
     switch ($aggrType)
     {
       case 'Range':
+      case 'DateRange':
         foreach ($options['ranges'] as $range)
         {
           $aggr->addRange($range['from'], $range['to'], $range['key']);
@@ -366,57 +283,24 @@ class QubitAPIAction extends sfAction
         break;
     }
 
-    $query->addAggregation($aggr);
+    return $aggr;
   }
 
-  protected function populateFacets(&$facets, $aggregations = array())
+  protected function formatAggs(&$aggs)
   {
-    foreach ($facets as $name => &$facet)
+    foreach ($aggs as $name => &$agg)
     {
-      if (isset($facet['terms']))
-      {
-        foreach ($facet['terms'] as &$item)
-        {
-          if (method_exists($this, 'getFacetLabel') && null !== $label = $this->getFacetLabel($name, $item['term']))
-          {
-            $item['label'] = $label;
-          }
-        }
-      }
-
-      if (isset($facet['ranges']))
-      {
-        foreach ($facet['ranges'] as $key => &$item)
-        {
-          if (method_exists($this, 'getFacetLabel') && null !== $label = $this->getFacetLabel($name, $key))
-          {
-            $item['label'] = $label;
-          }
-        }
-      }
-    }
-
-    // Temporary transform aggregations to facet format to avoid changes
-    // in the frontend until aggregations are fully implemented
-    foreach ($aggregations as $name => $aggregation)
-    {
-      if (!isset($aggregation['buckets']) || 0 == count($aggregation['buckets']))
+      if (!isset($agg['buckets']) || 0 == count($agg['buckets']))
       {
         continue;
       }
 
-      // At the moment we only have range aggregations
-      $facets[$name] = array('ranges' => array());
-
-      foreach ($aggregation['buckets'] as $bucket)
+      foreach ($agg['buckets'] as &$bucket)
       {
-        if (isset($bucket['doc_count']))
+        if (method_exists($this, 'getAggLabel') && null !== $label = $this->getAggLabel($name, $bucket['key']))
         {
-          $bucket['count'] = $bucket['doc_count'];
-          unset($bucket['doc_count']);
+          $bucket['label'] = $label;
         }
-
-        $facets[$name]['ranges'][] = $bucket;
       }
     }
   }
@@ -429,5 +313,62 @@ class QubitAPIAction extends sfAction
     }
 
     $array[$key] = $value;
+  }
+
+  protected function getAipsOverview($artworkId = null)
+  {
+    $query = new \Elastica\Query;
+
+    // Filter by artwork or get all
+    if (isset($artworkId))
+    {
+      $query->setQuery(new \Elastica\Query\Term(array('partOf.id' => $artworkId)));
+    }
+    else
+    {
+      $query->setQuery(new \Elastica\Query\MatchAll);
+    }
+
+    // We don't need details, just aggregation results
+    $query->setSize(0);
+
+    // Create nested aggregation to get total size by type
+    // including those missing type, as type.id = 0
+    $aggOptions = array(
+      'params' => array(
+        array(
+          'name' => 'missing',
+          'value' => 0
+        )
+      )
+    );
+    $agg = $this->buildEsAgg('Terms', 'type', 'type.id', $aggOptions);
+    $agg->addAggregation($this->buildEsAgg('Sum', 'size', 'sizeOnDisk'));
+    $query->addAggregation($agg);
+
+    $resultSet = QubitSearch::getInstance()->index->getType('QubitAip')->search($query);
+    $aggs = $resultSet->getAggregations();
+
+    $results = array('total' => array('size' => 0, 'count' => 0));
+    foreach ($aggs['type']['buckets'] as $bucket)
+    {
+      // Rename missing type key
+      if ($bucket['key'] == 0)
+      {
+        $bucket['key'] = 'unclassified';
+      }
+
+      // Add values per type
+      $results[$bucket['key']] = array(
+        'size' => $bucket['size']['value'],
+        'count' => $bucket['doc_count']
+      );
+
+      // Calculate totals
+      $results['total']['size'] += $bucket['size']['value'];
+      $results['total']['count'] += $bucket['doc_count'];
+    }
+
+    return $results;
   }
 }
