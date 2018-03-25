@@ -181,8 +181,9 @@ class qtPackageExtractorMETSArchivematicaDIP extends qtPackageExtractorBase
     // Initialice METS parser, used in addDigitalObjects to add
     // the required data from the METS file to the digital objects
     $this->metsParser = new QubitMetsParser($this->document);
-    
+
     $this->document->registerXPathNamespace('m', 'http://www.loc.gov/METS/');
+    $this->document->registerXPathNamespace('p', 'info:lc/xmlns/premis-v2');
 
     // Check Archivematica Binder prefix
     $drmcPrefix = substr($this->resource, 0, 3);
@@ -464,8 +465,8 @@ class qtPackageExtractorMETSArchivematicaDIP extends qtPackageExtractorBase
     $totalSize = 0;
     foreach ($this->document->xpath('//m:amdSec/m:techMD/m:mdWrap[@MDTYPE="PREMIS:OBJECT"]/m:xmlData') as $xmlData)
     {
-      $xmlData->registerXPathNamespace('s', 'info:lc/xmlns/premis-v2');
-      if (0 < count($size = $xmlData->xpath('s:object/s:objectCharacteristics/s:size')))
+      $xmlData->registerXPathNamespace('p', 'info:lc/xmlns/premis-v2');
+      if (0 < count($size = $xmlData->xpath('p:object/p:objectCharacteristics/p:size')))
       {
         $totalSize += $size[0];
       }
@@ -484,14 +485,14 @@ class qtPackageExtractorMETSArchivematicaDIP extends qtPackageExtractorBase
     $aip->save();
 
     // Get AIP ingenstion username
-    foreach ($this->document->xpath('//m:amdSec/m:digiprovMD/m:mdWrap[@MDTYPE="PREMIS:AGENT"]/m:xmlData/m:agent') as $agent)
+    foreach ($this->document->xpath('//m:amdSec/m:digiprovMD/m:mdWrap[@MDTYPE="PREMIS:AGENT"]/m:xmlData/p:agent') as $agent)
     {
-      $agent->registerXPathNamespace('m', 'http://www.loc.gov/METS/');
-      $agentType = $agent->xpath('m:agentIdentifier/m:agentIdentifierType');
+      $agent->registerXPathNamespace('p', 'info:lc/xmlns/premis-v2');
+      $agentType = $agent->xpath('p:agentIdentifier/p:agentIdentifierType');
 
       if (0 < count($agentType) && (string)$agentType[0] === 'Archivematica user pk')
       {
-        if (0 < count($agentName = $agent->xpath('m:agentName')))
+        if (0 < count($agentName = $agent->xpath('p:agentName')))
         {
           $agentName = (string)$agentName[0];
           $agentName = split(',', $agentName);
