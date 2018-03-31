@@ -1,6 +1,8 @@
 /apps/qubit/config/factories.yml
 /apps/qubit/config/settings.yml
 /apps/qubit/config/app.yml
+/apps/qubit/config/gearman.yml
+/apps/qubit/config/search.yml
 /cache/
 /config/config.php
 /config/databases.yml
