@@ -32,33 +32,33 @@ class arElasticSearchMapping
    * provided by Elasticsearch.
    */
   private static $analyzers = array(
-    'ar' => 'std_arabic',
-    'hy' => 'std_armenian',
-    'ba' => 'std_basque',
-    'br' => 'std_brazilian',
-    'bg' => 'std_bulgarian',
-    'ca' => 'std_catalan',
-    'cz' => 'std_czech',
-    'da' => 'std_danish',
-    'nl' => 'std_dutch',
-    'en' => 'std_english',
-    'fi' => 'std_finnish',
-    'fr' => 'std_french',
-    'gl' => 'std_galician',
-    'ge' => 'std_german',
-    'el' => 'std_greek',
-    'hi' => 'std_hindi',
-    'hu' => 'std_hungarian',
-    'id' => 'std_indonesian',
-    'it' => 'std_italian',
-    'no' => 'std_norwegian',
-    'fa' => 'std_persian',
-    'pt' => 'std_portuguese',
-    'ro' => 'std_romanian',
-    'ru' => 'std_russian',
-    'es' => 'std_spanish',
-    'sv' => 'std_swedish',
-    'tr' => 'std_turkish'
+    'ar' => 'arabic',
+    'hy' => 'armenian',
+    'ba' => 'basque',
+    'br' => 'brazilian',
+    'bg' => 'bulgarian',
+    'ca' => 'catalan',
+    'cz' => 'czech',
+    'da' => 'danish',
+    'nl' => 'dutch',
+    'en' => 'english',
+    'fi' => 'finnish',
+    'fr' => 'french',
+    'gl' => 'galician',
+    'ge' => 'german',
+    'el' => 'greek',
+    'hi' => 'hindi',
+    'hu' => 'hungarian',
+    'id' => 'indonesian',
+    'it' => 'italian',
+    'no' => 'norwegian',
+    'fa' => 'persian',
+    'pt' => 'portuguese',
+    'ro' => 'romanian',
+    'ru' => 'russian',
+    'es' => 'spanish',
+    'sv' => 'swedish',
+    'tr' => 'turkish'
   );
 
   /**
@@ -456,7 +456,7 @@ class arElasticSearchMapping
       $culture = $setting->getValue(array('sourceCulture' => true));
 
       // Iterate each field and assign a custom standard analyzer (e.g.
-      // std_french in search.yml) based in the language being used. The default
+      // french in search.yml) based in the language being used. The default
       // analyzer is standard, which does not provide a stopwords list.
       foreach ($nestedI18nFields as $fn => &$fv)
       {
