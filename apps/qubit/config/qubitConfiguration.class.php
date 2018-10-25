@@ -33,6 +33,13 @@ class qubitConfiguration extends sfApplicationConfiguration
       if (strpos($key, 'app_drmc_') === 0)
       {
         $key = substr($key, 9);
+
+        // Do not include SS information
+        if (strpos($key, 'ss_') === 0)
+        {
+          continue;
+        }
+
         $drmc[$key] = $value;
       }
     }
