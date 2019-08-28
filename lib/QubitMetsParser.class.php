@@ -26,10 +26,362 @@ class QubitMetsParser
     // Load document
     $this->document = $document;
 
-    // Register namespaces
-    $this->document->registerXPathNamespace('m', 'http://www.loc.gov/METS/');
-    $this->document->registerXPathNamespace('p', 'info:lc/xmlns/premis-v2');
-    $this->document->registerXPathNamespace('f', 'http://hul.harvard.edu/ois/xml/ns/fits/fits_output');
+    // Get declared namespaces in the document
+    $this->namespaces = $this->document->getDocNamespaces(true);
+
+    // For backwards compatibility, add default namespaces as they
+    // were declared without name in the METS file (fits still is).
+    $defaultNamespaces = array(
+      'mets' => 'http://www.loc.gov/METS/',
+      'premis' => 'info:lc/xmlns/premis-v2',
+      'fits' => 'http://hul.harvard.edu/ois/xml/ns/fits/fits_output',
+    );
+    foreach ($defaultNamespaces as $name => $uri)
+    {
+      // Do not overwrite the ones declared in the METS file
+      if (!isset($this->namespaces[$name]))
+      {
+        $this->namespaces[$name] = $uri;
+      }
+    }
+
+    // Register namespaces for XPath queries made directly over the document
+    $this->registerNamespaces($this->document, array('m' => 'mets', 'p' => 'premis', 'f' => 'fits'));
+  }
+
+  public function getStructMap()
+  {
+    // Check first for logical structMap
+    $structMap = $this->document->xpath('//m:structMap[@TYPE="logical" and @LABEL="Hierarchical"]');
+
+    if (false !== $structMap && 0 < count($structMap))
+    {
+      return  $structMap[0];
+    }
+
+    // Then for physical
+    $structMap = $this->document->xpath('//m:structMap[@TYPE="physical"]');
+
+    if (false !== $structMap && 0 < count($structMap))
+    {
+      return  $structMap[0];
+    }
+  }
+
+  /*
+   * Level of descriptions mapping removed from Binder,
+   * everything else is the same as in AtoM stable/2.5.x.
+   */
+  public function getDipUploadMappings($structMap)
+  {
+    $mappings = $dmdMapping = $uuidMapping = array();
+
+    // FILEID to DMD mapping
+    foreach ($this->document->xpath('//m:structMap[@TYPE="logical" or @TYPE="physical"]//m:div') as $item)
+    {
+      $this->registerNamespaces($item, array('m' => 'mets'));
+
+      if (0 < count($fptr = $item->xpath('m:fptr')))
+      {
+        $dmdId = (string)$item['DMDID'];
+        $fileId = (string)$fptr[0]['FILEID'];
+
+        if (strlen($fileId) > 0 && strlen($dmdId) > 0)
+        {
+          $dmdMapping[$fileId] = $dmdId;
+        }
+      }
+    }
+
+    // FILEID to UUID mapping
+    foreach ($this->document->xpath('//m:fileSec/m:fileGrp[@USE="original"]/m:file') as $file)
+    {
+      // Get premis:objectIdentifiers in amd section for each file
+      if (isset($file['ADMID']) && isset($file['ID'])
+       && false !== $identifiers = $this->document->xpath('//m:amdSec[@ID="'.(string)$file['ADMID'].'"]//p:objectIdentifier'))
+      {
+        // Find UUID type
+        foreach ($identifiers as $item)
+        {
+          $this->registerNamespaces($item, array('p' => 'premis'));
+
+          if (count($type = $item->xpath('p:objectIdentifierType')) > 0
+            && count($value = $item->xpath('p:objectIdentifierValue')) > 0
+            && 'UUID' == (string)$type[0])
+          {
+            $uuidMapping[(string)$file['ID']] = (string)$value[0];
+          }
+        }
+      }
+    }
+
+    $mappings['dmdMapping'] = $dmdMapping;
+    $mappings['uuidMapping'] = $uuidMapping;
+
+    return $mappings;
+  }
+
+  public function getMainDmdSec()
+  {
+    $structMap = $this->document->xpath('//m:structMap[@TYPE="physical"]');
+    if (count($structMap) == 0)
+    {
+      return;
+    }
+
+    $structMap = $structMap[0];
+    $this->registerNamespaces($structMap, array('m' => 'mets'));
+    $divs = $structMap->xpath('m:div/m:div');
+    if (count($divs) == 0 || !isset($divs[0]['DMDID']))
+    {
+      return;
+    }
+
+    return $this->getDmdSec((string)$divs[0]['DMDID']);
+  }
+
+  public function getDmdSec($dmdId)
+  {
+    // The DMDID attribute can contain one or more DMD section ids
+    // (e.g.: DMDID="dmdSec_2 dmdSec_3"). When multiple DMD sections
+    // are associated with the same file/dir we'll try to return the
+    // latest one created.
+    $latestDmdSec = null;
+    $latestDate = '';
+    foreach (explode(' ', $dmdId) as $id)
+    {
+      $dmdSecs = $this->document->xpath('//m:dmdSec[@ID="'.$id.'"]');
+      if (count($dmdSecs) == 0)
+      {
+        continue;
+      }
+
+      $dmdSec = $dmdSecs[0];
+      $date = $dmdSec['CREATED'];
+      if (!isset($latestDmdSec) || (isset($date) && $date > $latestDate))
+      {
+        $latestDmdSec = $dmdSec;
+        $latestDate = isset($date) ? $date : '';
+      }
+    }
+
+    return $latestDmdSec;
+  }
+
+  /**
+   * Find the original filename
+   * simple_load_string() is used to make xpath queries faster
+   */
+  public function getOriginalFilename($fileId)
+  {
+    if ((false !== $file = $this->document->xpath('//m:fileSec/m:fileGrp[@USE="original"]/m:file[@ID="'.$fileId.'"]'))
+      && (null !== $admId = $file[0]['ADMID'])
+      && (false !== $xmlData = $this->document->xpath('//m:amdSec[@ID="'.(string)$admId.'"]/m:techMD/m:mdWrap/m:xmlData')))
+    {
+      $xmlData = simplexml_load_string($xmlData[0]->asXML());
+      $this->registerNamespaces($xmlData, array('p' => 'premis'));
+
+      if (false !== $originalName = $xmlData->xpath('//p:object//p:originalName'))
+      {
+        return end(explode('/', (string)$originalName[0]));
+      }
+    }
+  }
+
+  public function getFilesFromOriginalFileGrp()
+  {
+    return $this->document->xpath('//m:mets/m:fileSec/m:fileGrp[@USE="original"]/m:file');
+  }
+
+  /*
+   * AIP functions
+   */
+
+  public function getAipSizeOnDisk()
+  {
+    $totalSize = 0;
+
+    foreach ($this->document->xpath('//m:amdSec/m:techMD/m:mdWrap[@MDTYPE="PREMIS:OBJECT"]/m:xmlData') as $xmlData)
+    {
+      $this->registerNamespaces($xmlData, array('p' => 'premis'));
+
+      if (0 < count($size = $xmlData->xpath('p:object/p:objectCharacteristics/p:size')))
+      {
+        $totalSize += $size[0];
+      }
+    }
+
+    return $totalSize;
+  }
+
+  public function getAipCreationDate()
+  {
+    $metsHdr = $this->document->xpath('//m:metsHdr');
+
+    if (isset($metsHdr) && null !== $createdAt = $metsHdr[0]['CREATEDATE'])
+    {
+      return $createdAt;
+    }
+  }
+
+  /*
+   * Information object functions
+   */
+
+  public function processDmdSec($xml, $informationObject)
+  {
+    $this->registerNamespaces($xml, array('m' => 'mets'));
+
+    // Use the local name to accept no namespace and dc or dcterms namespaces
+    $dublincore = $xml->xpath('.//m:mdWrap/m:xmlData/*[local-name()="dublincore"]/*');
+
+    $creation = array();
+
+    foreach ($dublincore as $item)
+    {
+      $value = trim($item->__toString());
+      if (0 == strlen($value))
+      {
+        continue;
+      }
+
+      // Strip namespaces from element names
+      switch (str_replace(array('dcterms:', 'dc:'), '', $item->getName()))
+      {
+        case 'title':
+          $informationObject->setTitle($value);
+
+          break;
+
+        case 'creator':
+          $creation['actorName'] = $value;
+          break;
+
+        case 'provenance':
+          $informationObject->acquisition = $value;
+
+          break;
+
+        case 'coverage':
+          $informationObject->setAccessPointByName($value, array('type_id' => QubitTaxonomy::PLACE_ID));
+
+          break;
+
+        case 'subject':
+          $informationObject->setAccessPointByName($value, array('type_id' => QubitTaxonomy::SUBJECT_ID));
+
+          break;
+
+        case 'description':
+          $informationObject->scopeAndContent = $value;
+
+          break;
+
+        case 'publisher':
+          $informationObject->setActorByName($value, array('event_type_id' => QubitTerm::PUBLICATION_ID));
+
+          break;
+
+        case 'contributor':
+          $informationObject->setActorByName($value, array('event_type_id' => QubitTerm::CONTRIBUTION_ID));
+
+          break;
+
+        case 'date':
+          $creation['date'] = $value;
+
+          break;
+
+        case 'type':
+          foreach (QubitTaxonomy::getTermsById(QubitTaxonomy::DC_TYPE_ID) as $item)
+          {
+            if (strtolower($value) == strtolower($item->__toString()))
+            {
+              $relation = new QubitObjectTermRelation;
+              $relation->term = $item;
+
+              $informationObject->objectTermRelationsRelatedByobjectId[] = $relation;
+
+              break;
+            }
+          }
+
+          break;
+
+        case 'extent':
+        case 'format':
+          $informationObject->extentAndMedium = $value;
+
+          break;
+
+        case 'identifier':
+          $informationObject->identifier = $value;
+
+          break;
+
+        case 'source':
+          $informationObject->locationOfOriginals = $value;
+
+          break;
+
+        case 'language':
+          // TODO: the user could write "English" instead of "en"? (see symfony...widget/i18n/*)
+          $informationObject->language = array($value);
+
+          break;
+
+        case 'isPartOf':
+          // TODO: ?
+
+          break;
+
+        case 'rights':
+          $informationObject->accessConditions = $value;
+
+          break;
+      }
+    }
+
+    if (count($creation) > 0)
+    {
+      $event = new QubitEvent;
+      $event->typeId = QubitTerm::CREATION_ID;
+
+      if ($creation['actorName'])
+      {
+        if (null === $actor = QubitActor::getByAuthorizedFormOfName($creation['actorName']))
+        {
+          $actor = new QubitActor;
+          $actor->parentId = QubitActor::ROOT_ID;
+          $actor->setAuthorizedFormOfName($creation['actorName']);
+          $actor->save();
+        }
+
+        $event->actorId = $actor->id;
+      }
+
+      if ($creation['date'])
+      {
+        // Save value without modification in free text field
+        $event->date = trim($creation['date']);
+
+        // Normalize expression of date range
+        $date = str_replace(' - ', '|', $event->date);
+        $dates = explode('|', $date);
+
+        // If date is a range, set start and end dates
+        if (count($dates) == 2)
+        {
+          // Parse each component date
+          $event->startDate = Qubit::parseDate($dates[0]);
+          $event->endDate = Qubit::parseDate($dates[1]);
+        }
+      }
+
+      $informationObject->events[] = $event;
+    }
+
+    return $informationObject;
   }
 
   public function addMetsDataToInformationObject(&$resource, $objectUuid)
@@ -474,7 +826,7 @@ class QubitMetsParser
 
     foreach ($mediainfoTracks as $track)
     {
-      $track->registerXPathNamespace('p', 'info:lc/xmlns/premis-v2');
+      $this->registerNamespaces($track, array('p' => 'premis'));
 
       $esTrack = array();
 
@@ -579,7 +931,7 @@ class QubitMetsParser
     // Get all events
     foreach ($this->document->xpath('//m:amdSec[@ID="'.$amdSecId.'"]/m:digiprovMD/m:mdWrap[@MDTYPE="PREMIS:EVENT"]/m:xmlData/p:event') as $item)
     {
-      $item->registerXPathNamespace('p', 'info:lc/xmlns/premis-v2');
+      $this->registerNamespaces($item, array('p' => 'premis'));
 
       $event = array();
 
@@ -596,7 +948,7 @@ class QubitMetsParser
       // Get all event linking agent identifiers
       foreach ($item->xpath('p:linkingAgentIdentifier') as $linkingAgent)
       {
-        $linkingAgent->registerXPathNamespace('p', 'info:lc/xmlns/premis-v2');
+        $this->registerNamespaces($linkingAgent, array('p' => 'premis'));
 
         $linkingAgentIdentifier = array();
 
@@ -653,7 +1005,7 @@ class QubitMetsParser
 
     foreach ($this->document->xpath('//m:amdSec[@ID="'.$amdSecId.'"]/m:digiprovMD/m:mdWrap[@MDTYPE="PREMIS:AGENT"]/m:xmlData/m:agent') as $item)
     {
-      $item->registerXPathNamespace('m', 'http://www.loc.gov/METS/');
+      $this->registerNamespaces($item, array('m' => 'mets'));
 
       $agent = array();
 
@@ -725,5 +1077,64 @@ class QubitMetsParser
           }
         }
     }
+  }
+
+  public function registerNamespaces($element, $namespaces)
+  {
+    foreach ($namespaces as $key => $name)
+    {
+      if (isset($this->namespaces[$name]))
+      {
+        $element->registerXPathNamespace($key, $this->namespaces[$name]);
+      }
+    }
+  }
+
+  /*
+   * Binder only functions:
+   *
+   * This class is equal to the one in AtoM stable/2.5.x, except for the modification
+   * in getDipUploadMappings and the addition of the following functions.
+   */
+
+  public function getAipIngestionUsername()
+  {
+    foreach ($this->document->xpath('//m:amdSec/m:digiprovMD/m:mdWrap[@MDTYPE="PREMIS:AGENT"]/m:xmlData/p:agent') as $agent)
+    {
+      $this->registerNamespaces($agent, array('p' => 'premis'));
+      $agentType = $agent->xpath('p:agentIdentifier/p:agentIdentifierType');
+
+      if (0 < count($agentType) && (string)$agentType[0] === 'Archivematica user pk')
+      {
+        if (0 < count($agentName = $agent->xpath('p:agentName')))
+        {
+          $agentName = (string)$agentName[0];
+          $agentName = split(',', $agentName);
+          $agentName = substr($agentName[0], 10, strlen($agentName[0]) - 11);
+
+          return $agentName;
+        }
+      }
+    }
+  }
+
+  public function getAipRelatedComponentNumber()
+  {
+    // Check if a ComponentNumber is set in DC identifier of the main dmd section
+    if (null != ($dmdSec = $this->getMainDmdSec()))
+    {
+      $this->registerNamespaces($dmdSec, array('m' => 'mets'));
+
+      if (0 < count($identifier = $dmdSec->xpath('.//m:mdWrap/m:xmlData/*[local-name()="dublincore"]/*[local-name()="identifier"]'))
+        && strlen($componentNumber = trim($identifier[0])) > 0)
+      {
+        return $componentNumber;
+      }
+    }
+  }
+
+  public function getAllFiles()
+  {
+    return $this->document->xpath('//m:mets/m:fileSec/m:fileGrp/m:file');
   }
 }

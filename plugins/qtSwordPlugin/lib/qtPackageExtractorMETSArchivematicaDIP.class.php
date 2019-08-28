@@ -19,124 +19,6 @@
 
 class qtPackageExtractorMETSArchivematicaDIP extends qtPackageExtractorBase
 {
-  protected function processDmdSec($xml, $informationObject, $options = array())
-  {
-    $xml->registerXPathNamespace('m', 'http://www.loc.gov/METS/');
-
-    $dublincore = $xml->xpath('.//m:mdWrap/m:xmlData/*[local-name()="dublincore"]/*');
-
-    $creation = array();
-
-    foreach ($dublincore as $item)
-    {
-      $value = trim($item->__toString());
-      if (0 == strlen($value))
-      {
-        continue;
-      }
-
-      switch (str_replace(array('dcterms:', 'dc:'), '', $item->getName()))
-      {
-        case 'title':
-          if (!isset($options['ignoreTitle']) || $options['ignoreTitle'] == false)
-          {
-            $informationObject->setTitle($value);
-          }
-
-          break;
-
-        case 'creator':
-          $creation['actorName'] = $value;
-          break;
-
-        case 'provenance':
-          $informationObject->acquisition = $value;
-
-          break;
-
-        case 'coverage':
-          $informationObject->setAccessPointByName($value, array('type_id' => QubitTaxonomy::PLACE_ID));
-
-          break;
-
-        case 'subject':
-          $informationObject->setAccessPointByName($value, array('type_id' => QubitTaxonomy::SUBJECT_ID));
-
-          break;
-
-        case 'description':
-          $informationObject->scopeAndContent = $value;
-
-          break;
-
-        case 'publisher':
-          $informationObject->setActorByName($value, array('event_type_id' => QubitTerm::PUBLICATION_ID));
-
-          break;
-
-        case 'contributor':
-          $informationObject->setActorByName($value, array('event_type_id' => QubitTerm::CONTRIBUTION_ID));
-
-          break;
-
-        case 'date':
-          $creation['date'] = $value;
-
-          break;
-
-        case 'type':
-          foreach (QubitTaxonomy::getTermsById(QubitTaxonomy::DC_TYPE_ID) as $item)
-          {
-            if (strtolower($value) == strtolower($item->__toString()))
-            {
-              $relation = new QubitObjectTermRelation;
-              $relation->term = $item;
-
-              $informationObject->objectTermRelationsRelatedByobjectId[] = $relation;
-
-              break;
-            }
-          }
-
-          break;
-
-        case 'extent':
-        case 'format':
-          $informationObject->extentAndMedium = $value;
-
-          break;
-
-        case 'identifier':
-          $informationObject->identifier = $value;
-
-          break;
-
-        case 'source':
-          $informationObject->locationOfOriginals = $value;
-
-          break;
-
-        case 'language':
-          // TODO: the user could write "English" instead of "en"? (see symfony...widget/i18n/*)
-          $informationObject->language = array($value);
-
-          break;
-
-        case 'isPartOf':
-          // TODO: ?
-
-          break;
-
-        case 'rights':
-          $informationObject->accessConditions = $value;
-
-          break;
-      }
-    }
-
-    return array($informationObject, $creation);
-  }
-
   protected function process()
   {
     ProjectConfiguration::getActive()->loadHelpers('Qubit');
@@ -182,8 +64,14 @@ class qtPackageExtractorMETSArchivematicaDIP extends qtPackageExtractorBase
     // the required data from the METS file to the digital objects
     $this->metsParser = new QubitMetsParser($this->document);
 
-    $this->document->registerXPathNamespace('m', 'http://www.loc.gov/METS/');
-    $this->document->registerXPathNamespace('p', 'info:lc/xmlns/premis-v2');
+    // Stop if there isn't a proper structMap
+    if (null === $structMap = $this->metsParser->getStructMap())
+    {
+      throw new sfException('A proper structMap could not be found in the METS file.');
+    }
+
+    // Load mappings
+    $this->mappings = $this->metsParser->getDipUploadMappings($structMap);
 
     // Check Archivematica Binder prefix
     $drmcPrefix = substr($this->resource, 0, 3);
@@ -356,24 +244,18 @@ class qtPackageExtractorMETSArchivematicaDIP extends qtPackageExtractorBase
       }
     }
 
-    // Check if a ComponentNumber is set in DC identifier of the main dmd section
-    if (null != ($dmdSec = $this->getMainDmdSec()))
+    // Check if the AIP is related to a TMSComponent
+    if (null != ($componentNumber = $this->metsParser->getAipRelatedComponentNumber()))
     {
-      $dmdSec->registerXPathNamespace('m', 'http://www.loc.gov/METS/');
+      // Check for existing TMSComponent
+      $criteria = new Criteria;
+      $criteria->addJoin(QubitProperty::ID, QubitPropertyI18n::ID);
+      $criteria->add(QubitProperty::NAME, 'ComponentNumber');
+      $criteria->add(QubitPropertyI18n::VALUE, $componentNumber);
 
-      if (0 < count($identifier = $dmdSec->xpath('.//m:mdWrap/m:xmlData/*[local-name()="dublincore"]/*[local-name()="identifier"]'))
-        && strlen($componentNumber = trim($identifier[0])) > 0)
+      if (null !== $property = QubitProperty::getOne($criteria))
       {
-        // Check for existing TMSComponent
-        $criteria = new Criteria;
-        $criteria->addJoin(QubitProperty::ID, QubitPropertyI18n::ID);
-        $criteria->add(QubitProperty::NAME, 'ComponentNumber');
-        $criteria->add(QubitPropertyI18n::VALUE, $componentNumber);
-
-        if (null !== $property = QubitProperty::getOne($criteria))
-        {
-          $component = QubitInformationObject::getById($property->objectId);
-        }
+        $component = QubitInformationObject::getById($property->objectId);
       }
     }
 
@@ -431,23 +313,13 @@ class qtPackageExtractorMETSArchivematicaDIP extends qtPackageExtractorBase
     $aipIo->title = 'AIP';
 
     // Add main object data in METS file to the AIP intermediate level
-    if (null != ($dmdSec = $this->getMainDmdSec()))
+    if (null != ($dmdSec = $this->metsParser->getMainDmdSec()))
     {
-      list($aipIo, $creation) = $this->processDmdSec($dmdSec, $aipIo, $options = array('ignoreTitle' => false));
+      $this->metsParser->processDmdSec($dmdSec, $aipIo);
     }
 
     $aipIo->indexOnSave = false;
     $aipIo->save();
-
-    if (count($creation))
-    {
-      $event = new QubitEvent;
-      $event->informationObjectId = $aipIo->id;
-      $event->typeId = QubitTerm::CREATION_ID;
-      $event->indexOnSave = false;
-
-      qtSwordPlugin::addDataToCreationEvent($event, $creation);
-    }
 
     sfContext::getInstance()->getLogger()->info('METSArchivematicaDIP - $aipIo created '.$aipIo->id);
 
@@ -460,49 +332,14 @@ class qtPackageExtractorMETSArchivematicaDIP extends qtPackageExtractorBase
     $aip->filename = substr($filename, 0, -37);
     $aip->digitalObjectCount = count($this->getFilesFromDirectory($this->filename.DIRECTORY_SEPARATOR.'/objects'));
     $aip->partOf = $partOfObject->id;
-
-    // Get size on disk
-    $totalSize = 0;
-    foreach ($this->document->xpath('//m:amdSec/m:techMD/m:mdWrap[@MDTYPE="PREMIS:OBJECT"]/m:xmlData') as $xmlData)
-    {
-      $xmlData->registerXPathNamespace('p', 'info:lc/xmlns/premis-v2');
-      if (0 < count($size = $xmlData->xpath('p:object/p:objectCharacteristics/p:size')))
-      {
-        $totalSize += $size[0];
-      }
-    }
-
-    $aip->sizeOnDisk = $totalSize;
-
-    // Get AIP creation date
-    $metsHdr = $this->document->xpath('//m:metsHdr');
-    if (isset($metsHdr) && null !== $createdAt = $metsHdr[0]['CREATEDATE'])
-    {
-      $aip->createdAt = $createdAt;
-    }
-
+    $aip->sizeOnDisk = $this->metsParser->getAipSizeOnDisk();
+    $aip->createdAt = $this->metsParser->getAipCreationDate();
     $aip->indexOnSave = false;
     $aip->save();
 
-    // Get AIP ingenstion username
-    foreach ($this->document->xpath('//m:amdSec/m:digiprovMD/m:mdWrap[@MDTYPE="PREMIS:AGENT"]/m:xmlData/p:agent') as $agent)
+    if (null != ($username = $this->metsParser->getAipIngestionUsername()))
     {
-      $agent->registerXPathNamespace('p', 'info:lc/xmlns/premis-v2');
-      $agentType = $agent->xpath('p:agentIdentifier/p:agentIdentifierType');
-
-      if (0 < count($agentType) && (string)$agentType[0] === 'Archivematica user pk')
-      {
-        if (0 < count($agentName = $agent->xpath('p:agentName')))
-        {
-          $agentName = (string)$agentName[0];
-          $agentName = split(',', $agentName);
-          $agentName = substr($agentName[0], 10, strlen($agentName[0]) - 11);
-
-          QubitProperty::addUnique($aip->id, 'ingestionUser', $agentName, array('indexOnSave' => false));
-
-          break;
-        }
-      }
+      QubitProperty::addUnique($aip->id, 'ingestionUser', $username, array('indexOnSave' => false));
     }
 
     // Add parent title of the AIP information object as attachedTo property for the AIP
@@ -549,27 +386,33 @@ class qtPackageExtractorMETSArchivematicaDIP extends qtPackageExtractorBase
     // Add child to ES
     QubitSearch::getInstance()->update($child);
 
-    $files = $this->document->xpath('//m:mets/m:fileSec/m:fileGrp/m:file');
+    $files = $this->metsParser->getAllFiles();
     if (false === $files || count($files) === 0)
     {
       sfContext::getInstance()->getLogger()->err('METSArchivematicaDIP - addDigitalObjects(): fileGrp not found');
       return;
     }
 
-    $mapping = $this->getStructMapFileToDmdSecMapping();
-
     foreach ($files as $file)
     {
-      // Parent fileGrp
-      $parent = current($file->xpath('parent::*'));
+      if(!isset($file['ID']))
+      {
+        continue;
+      }
 
-      // Obtain use and UUID
+      // File ID and UUID
+      $fileId = (string)$file['ID'];
+      $uuid = $this->mappings['uuidMapping'][$fileId];
+
+      // Parent fileGrp and use
+      $parent = current($file->xpath('parent::*'));
       $use = (string)$parent['USE'];
-      $uuid = $this->getUUID($file->attributes()->ID);
+
       sfContext::getInstance()->getLogger()->info('METSArchivematicaDIP - objectUUID: '.$uuid.' ('.$use.')');
 
       // Check availability of FLocat
-      $file->registerXPathNamespace('m', 'http://www.loc.gov/METS/');
+      $this->metsParser->registerNamespaces($file, array('m' => 'mets'));
+
       if (null === $fLocat = $file->xpath('m:FLocat')[0])
       {
         sfContext::getInstance()->getLogger()->err('METSArchivematicaDIP - FLocat not found');
@@ -628,29 +471,14 @@ class qtPackageExtractorMETSArchivematicaDIP extends qtPackageExtractorBase
         $child->digitalObjects[] = $digitalObject;
       }
 
-      // Process metatadata
-      // Child must be saved after processDmdSec. Saving it twice in the job
-      // makes the second one inefficient
-      if (null !== ($dmdSec = $this->searchFileDmdSec($uuid, $mapping)))
+      // Process metatadata from METS file
+      if ((null !== $dmdId = $this->mappings['dmdMapping'][$fileId])
+        && (null !== $dmdSec = $this->metsParser->getDmdSec($dmdId)))
       {
-        list($child, $creation) = $this->processDmdSec($dmdSec, $child);
-
-        $child->save();
-
-        if (count($creation))
-        {
-          $event = new QubitEvent;
-          $event->informationObjectId = $child->id;
-          $event->typeId = QubitTerm::CREATION_ID;
-          $event->indexOnSave = false;
-
-          qtSwordPlugin::addDataToCreationEvent($event, $creation);
-        }
+        $child = $this->metsParser->processDmdSec($dmdSec, $child);
       }
-      else
-      {
-        $child->save();
-      }
+
+      $child->save();
 
       // Use property to augment digital object with relative path within AIP
       $property = new QubitProperty;
@@ -678,56 +506,6 @@ class qtPackageExtractorMETSArchivematicaDIP extends qtPackageExtractorBase
     return;
   }
 
-  protected function getStructMapFileToDmdSecMapping()
-  {
-    $this->structMap->registerXPathNamespace('m', 'http://www.loc.gov/METS/');
-
-    switch ((string)$this->structMap['TYPE'])
-    {
-      case 'logical':
-        $items = $this->structMap->xpath('m:div/m:div');
-
-        break;
-
-      case 'physical':
-        $items = $this->structMap->xpath('m:div/m:div/m:div');
-
-        break;
-    }
-
-    $explore = function(&$items, &$mapping = array()) use (&$explore)
-    {
-      foreach ($items as $item)
-      {
-        $item->registerXPathNamespace('m', 'http://www.loc.gov/METS/');
-
-        switch ((string)$item['TYPE'])
-        {
-          case 'Directory':
-            if (in_array((string)$item['LABEL'], array('metadata', 'submissionDocumentation')))
-            {
-              continue;
-            }
-
-            $explore($item, $mapping);
-
-            break;
-
-          case 'Item':
-            $fptr = $item->xpath('m:fptr');
-
-            $mapping[(string)$fptr[0]['FILEID']] = (string)$item['DMDID'];
-
-            break;
-        }
-      }
-
-      return $mapping;
-    };
-
-    return $explore($items);
-  }
-
   protected function getAccessCopyPath($uuid)
   {
     $glob = $this->filename.DIRECTORY_SEPARATOR.'objects'.DIRECTORY_SEPARATOR.$uuid.'*';
@@ -738,81 +516,5 @@ class qtPackageExtractorMETSArchivematicaDIP extends qtPackageExtractorBase
     }
 
     return current($matches);
-  }
-
-  protected function getMainDmdSec()
-  {
-    $structMaps = $this->document->xpath('//m:structMap');
-    if (empty($structMaps))
-    {
-      throw new sfException('Not logical or physical structMap found');
-    }
-
-    foreach ($structMaps as $item)
-    {
-      $item->registerXPathNamespace('m', 'http://www.loc.gov/METS/');
-
-      switch ((string)$item['TYPE'])
-      {
-        case 'logical':
-          $divs = $item->xpath('m:div');
-
-          break;
-
-        case 'physical':
-          $divs = $item->xpath('m:div/m:div');
-
-          break;
-
-        default:
-          throw new sfException('Unrecognized structMap layout: '.$item['TYPE']);
-      }
-
-      // We're going to need this later
-      $this->structMap = $item;
-
-      if (count($divs) > 0)
-      {
-        $dmdId = $divs[0]['DMDID'];
-      }
-
-      if (null === $dmdId)
-      {
-        continue;
-      }
-
-      $dmdSec = $this->document->xpath('//m:dmdSec[@ID="'.(string)$dmdId.'"]');
-      if (0 < count($dmdSec))
-      {
-        sfContext::getInstance()->getLogger()->info('METSArchivematicaDIP - dmdSec found!');
-
-        return $dmdSec[0];
-      }
-    }
-
-    sfContext::getInstance()->getLogger()->info('METSArchivematicaDIP - dmdSec not found!');
-  }
-
-  protected function searchFileDmdSec($uuid, $mapping)
-  {
-    $nodes = $this->document->xpath('//m:mets/m:fileSec/m:fileGrp[@USE="original"]/m:file');
-    foreach ($nodes as $item)
-    {
-      if (false !== strstr($item['ID'], $uuid))
-      {
-        $id = (string)$item['ID'];
-
-        if (isset($mapping[$id]))
-        {
-          $dmdId = $mapping[$id];
-
-          $dmdSec = $this->document->xpath('//m:mets/m:dmdSec[@ID="'.$dmdId.'"]');
-          if (0 < count($dmdSec))
-          {
-            return $dmdSec[0];
-          }
-        }
-      }
-    }
   }
 }
