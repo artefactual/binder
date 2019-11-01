@@ -84,7 +84,14 @@ EOF;
       'Miscellaneous',
       'Supporting technology record',
       'AIP',
-      'Digital object'
+      'Digital object',
+      'Duplicating copy',
+      'Research copy',
+      'Production proof',
+      'Viewing copy',
+      'Artist supplied package',
+      'Production materials',
+      'Auxiliary elements',
     );
 
     // Find a specific level of description by its name (in English)
@@ -323,6 +330,24 @@ EOF;
 
       $config[$configurationId] = $item->id;
     }
+
+    // Save all component LOD ids
+    $config['app_drmc_component_lod_ids'] = array(
+      $config['app_drmc_lod_archival_master_id'],
+      $config['app_drmc_lod_artist_supplied_master_id'],
+      $config['app_drmc_lod_artist_verified_proof_id'],
+      $config['app_drmc_lod_exhibition_format_id'],
+      $config['app_drmc_lod_miscellaneous_id'],
+      $config['app_drmc_lod_component_id'],
+      $config['app_drmc_lod_duplicating_copy_id'],
+      $config['app_drmc_lod_research_copy_id'],
+      $config['app_drmc_lod_documentation_id'],
+      $config['app_drmc_lod_production_proof_id'],
+      $config['app_drmc_lod_viewing_copy_id'],
+      $config['app_drmc_lod_artist_supplied_package_id'],
+      $config['app_drmc_lod_production_materials_id'],
+      $config['app_drmc_lod_auxiliary_elements_id'],
+    );
 
     // Taxonomies
     $taxonomies = array(

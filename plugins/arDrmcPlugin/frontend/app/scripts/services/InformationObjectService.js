@@ -21,7 +21,14 @@
       'archival-master',
       'exhibition-format',
       'documentation',
-      'miscellaneous'
+      'miscellaneous',
+      'duplicating-copy',
+      'research-copy',
+      'production-proof',
+      'viewing-copy',
+      'artist-supplied-package',
+      'production-materials',
+      'auxiliary-elements'
     ];
 
     // List of level of descriptions originated from TMS

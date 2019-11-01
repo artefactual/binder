@@ -28,17 +28,11 @@ class ApiInformationObjectsTmsAction extends QubitApiAction
       throw new QubitApi404Exception('Information object not found');
     }
 
-    $allowedLevels = array(
-      sfConfig::get('app_drmc_lod_artwork_record_id'),
-      sfConfig::get('app_drmc_lod_archival_master_id'),
-      sfConfig::get('app_drmc_lod_artist_supplied_master_id'),
-      sfConfig::get('app_drmc_lod_artist_verified_proof_id'),
-      sfConfig::get('app_drmc_lod_exhibition_format_id'),
-      sfConfig::get('app_drmc_lod_miscellaneous_id'),
-      sfConfig::get('app_drmc_lod_component_id')
-    );
-
-    if (!in_array($this->io->levelOfDescriptionId, $allowedLevels))
+    $componentLevels = sfConfig::get('app_drmc_component_lod_ids');
+    if (
+      !in_array($this->io->levelOfDescriptionId, $componentLevels) &&
+      $this->io->levelOfDescriptionId !== sfConfig::get('app_drmc_lod_artwork_record_id')
+    )
     {
       throw new QubitApiException('TMS data not available for this level of description');
     }
@@ -86,6 +80,11 @@ class ApiInformationObjectsTmsAction extends QubitApiAction
     if (0 < count($termRelations = $this->io->getTermRelations(sfConfig::get('app_drmc_taxonomy_departments_id'))))
     {
       $this->addItemToArray($result, 'department', $termRelations[0]->term->getName(array('sourceCulture' => true)));
+    }
+
+    if (0 < count($notes = $this->io->getNotesByType($options = array('noteTypeId' => QubitTerm::GENERAL_NOTE_ID))))
+    {
+      $this->addItemToArray($result, 'terms', $notes[0]->getContent(array('sourceCulture' => true)));
     }
 
     $this->addItemToArray($result, 'medium', $this->io->extentAndMedium);

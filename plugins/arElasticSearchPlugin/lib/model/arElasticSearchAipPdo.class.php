@@ -177,10 +177,9 @@ class arElasticSearchAipPdo
     self::$statements['property']->execute(array($id, 'AccessionISODate'));
     $result = self::$statements['property']->fetch(PDO::FETCH_ASSOC);
 
-    if(false !== $result)
+    if (false !== $result)
     {
-      $dateComponents = date_parse($result['value']);
-      return $dateComponents['year'];
+      return arElasticSearchPluginUtil::parseYear($result['value']);
     }
   }
 

@@ -861,15 +861,7 @@ sql;
 
   protected function componentLevel()
   {
-    $componentLevels = array(
-      sfConfig::get('app_drmc_lod_archival_master_id'),
-      sfConfig::get('app_drmc_lod_artist_supplied_master_id'),
-      sfConfig::get('app_drmc_lod_artist_verified_proof_id'),
-      sfConfig::get('app_drmc_lod_exhibition_format_id'),
-      sfConfig::get('app_drmc_lod_miscellaneous_id'),
-      sfConfig::get('app_drmc_lod_component_id')
-    );
-
+    $componentLevels = sfConfig::get('app_drmc_component_lod_ids');
     $this->queryBool->addMust(new \Elastica\Query\Terms('levelOfDescriptionId', $componentLevels));
     $this->filterEsRangeQuery('from', 'to', 'createdAt', $this->queryBool);
     $this->query->setQuery($this->queryBool);

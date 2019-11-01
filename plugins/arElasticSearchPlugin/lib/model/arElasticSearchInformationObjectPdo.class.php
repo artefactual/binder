@@ -1196,15 +1196,13 @@ class arElasticSearchInformationObjectPdo
       if (null !== $collectionDate = $this->getProperty('Dated'))
       {
         $serialized['tmsObject']['collectionDate'] = $collectionDate;
-        $dateComponents = date_parse($collectionDate);
-        $serialized['tmsObject']['collectionYear'] = $dateComponents['year'];
+        $serialized['tmsObject']['collectionYear'] = arElasticSearchPluginUtil::parseYear($collectionDate);
       }
 
       if (null !== $dateCollected = $this->getProperty('AccessionISODate'))
       {
         $serialized['tmsObject']['dateCollected'] = arElasticSearchPluginUtil::convertDate($dateCollected);
-        $dateComponents = date_parse($dateCollected);
-        $serialized['tmsObject']['yearCollected'] = $dateComponents['year'];
+        $serialized['tmsObject']['yearCollected'] = arElasticSearchPluginUtil::parseYear($dateCollected);
       }
 
       if (null !== $accessionNumber = $this->getProperty('ObjectNumber'))
@@ -1260,16 +1258,7 @@ class arElasticSearchInformationObjectPdo
     }
 
     // TMS component
-    $componentLevels = array(
-      sfConfig::get('app_drmc_lod_archival_master_id'),
-      sfConfig::get('app_drmc_lod_artist_supplied_master_id'),
-      sfConfig::get('app_drmc_lod_artist_verified_proof_id'),
-      sfConfig::get('app_drmc_lod_exhibition_format_id'),
-      sfConfig::get('app_drmc_lod_miscellaneous_id'),
-      sfConfig::get('app_drmc_lod_component_id')
-    );
-
-    if (in_array($this->level_of_description_id, $componentLevels))
+    if (in_array($this->level_of_description_id, sfConfig::get('app_drmc_component_lod_ids')))
     {
       if (null !== $compCount = $this->getProperty('CompCount'))
       {

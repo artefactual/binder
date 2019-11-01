@@ -174,75 +174,25 @@ class qtPackageExtractorMETSArchivematicaDIP extends qtPackageExtractorBase
 
   protected function processArtworkRecord($tmsObjectId)
   {
-    // Check for existing Artwork
+    // Check for existing artwork
     $criteria = new Criteria;
     $criteria->add(QubitInformationObject::IDENTIFIER, $tmsObjectId);
     $criteria->add(QubitInformationObject::LEVEL_OF_DESCRIPTION_ID, sfConfig::get('app_drmc_lod_artwork_record_id'));
 
-    if (null !== $tmsObject = QubitInformationObject::getOne($criteria))
+    if (null === $artwork = QubitInformationObject::getOne($criteria))
     {
-      // Get intermediate level
-      $criteria = new Criteria;
-      $criteria->add(QubitInformationObject::PARENT_ID, $tmsObject->id);
-      $criteria->add(QubitInformationObject::LEVEL_OF_DESCRIPTION_ID, sfConfig::get('app_drmc_lod_description_id'));
-
-      if (null === $components = QubitInformationObject::getOne($criteria))
-      {
-        // Or create new one
-        $components = new QubitInformationObject;
-        $components->parentId = $tmsObject->id;
-        $components->levelOfDescriptionId = sfConfig::get('app_drmc_lod_description_id');
-        $components->setPublicationStatusByName('Published');
-        $components->title = 'Components';
-        $components->save();
-      }
+      // Or create new one
+      $artwork = new QubitInformationObject;
+      $artwork->identifier = $tmsObjectId;
+      $artwork->parentId = QubitInformationObject::ROOT_ID;
+      $artwork->levelOfDescriptionId = sfConfig::get('app_drmc_lod_artwork_record_id');
+      $artwork->setPublicationStatusByName('Published');
+      $artwork->indexOnSave = false;
+      $artwork->save();
     }
-    else
-    {
-      // Create artwork
-      $tmsObject = new QubitInformationObject;
-      $tmsObject->parentId = QubitInformationObject::ROOT_ID;
-      $tmsObject->levelOfDescriptionId = sfConfig::get('app_drmc_lod_artwork_record_id');
-      $tmsObject->setPublicationStatusByName('Published');
-      $tmsObject->indexOnSave = false;
 
-      $fetchTms = new arFetchTms;
-
-      // Get TMS Object data
-      list($tmsComponentsIds, $artworkThumbnail) = $fetchTms->getTmsObjectData($tmsObject, $tmsObjectId);
-
-      // Create intermediate level "Components"
-      $components = new QubitInformationObject;
-      $components->parentId = $tmsObject->id;
-      $components->levelOfDescriptionId = sfConfig::get('app_drmc_lod_description_id');
-      $components->setPublicationStatusByName('Published');
-      $components->title = 'Components';
-      $components->save();
-
-      // Obtain and create components from TMS
-      if (isset($tmsComponentsIds))
-      {
-        $tmsComponentsIoIds = array();
-        foreach ($tmsComponentsIds as $tmsId)
-        {
-          // Create component
-          $tmsComponent = new QubitInformationObject;
-          $tmsComponent->parentId = $components->id;
-          $tmsComponent->levelOfDescriptionId = sfConfig::get('app_drmc_lod_component_id');
-          $tmsComponent->setPublicationStatusByName('Published');
-
-          // Get TMS Component data
-          $tmsComponentsIoIds[] = $fetchTms->getTmsComponentData($tmsComponent, $tmsId, $artworkThumbnail);
-        }
-
-        // Create relations between components
-        $fetchTms->processComponentRelations($tmsComponentsIoIds);
-
-        // Save info object components ids as property of the artwork
-        // because they are not directly related but added as part of the artwork in ES
-        QubitProperty::addUnique($tmsObject->id, 'childComponents', serialize($tmsComponentsIoIds), array('indexOnSave' => false));
-      }
-    }
+    $fetchTms = new arFetchTms;
+    $fetchTms->processArtwork($artwork);
 
     // Check if the AIP is related to a TMSComponent
     if (null != ($componentNumber = $this->metsParser->getAipRelatedComponentNumber()))
@@ -259,13 +209,13 @@ class qtPackageExtractorMETSArchivematicaDIP extends qtPackageExtractorBase
       }
     }
 
+    // Relate AIP to component directly if set and found
     if (isset($component))
     {
-      list($aipIo, $aip) = $this->addAip($component, $tmsObject);
+      list($aipIo, $aip) = $this->addAip($component, $artwork);
 
       $this->addDigitalObjects($aipIo);
 
-      // Create relation between AIP and component
       $relation = new QubitRelation;
       $relation->object = $component;
       $relation->subject = $aip;
@@ -276,16 +226,23 @@ class qtPackageExtractorMETSArchivematicaDIP extends qtPackageExtractorBase
       // Add AIP to the component in ES
       QubitSearch::getInstance()->update($component);
     }
+    // Otherwise, relate AIP with intermediate components level
     else
     {
-      list($aipIo, $aip) = $this->addAip($components, $tmsObject);
+      $criteria = new Criteria;
+      $criteria->add(QubitInformationObject::PARENT_ID, $artwork->id);
+      $criteria->add(QubitInformationObject::LEVEL_OF_DESCRIPTION_ID, sfConfig::get('app_drmc_lod_description_id'));
+
+      // $fetchTms->processArtwork makes sure an intermediate level exists
+      $components = QubitInformationObject::getOne($criteria);
+      list($aipIo, $aip) = $this->addAip($components, $artwork);
 
       $this->addDigitalObjects($aipIo);
     }
 
-    // Create relation between AIP and artwork
+    // Create relation between AIP and artwork in all cases
     $relation = new QubitRelation;
-    $relation->object = $tmsObject;
+    $relation->object = $artwork;
     $relation->subject = $aip;
     $relation->typeId = QubitTerm::AIP_RELATION_ID;
     $relation->indexOnSave = false;
@@ -295,7 +252,7 @@ class qtPackageExtractorMETSArchivematicaDIP extends qtPackageExtractorBase
     // and save AIP and components data for the artwork in ES
     QubitSearch::getInstance()->update($aip);
     QubitSearch::getInstance()->update($aipIo);
-    QubitSearch::getInstance()->update($tmsObject);
+    QubitSearch::getInstance()->update($artwork);
   }
 
   /*

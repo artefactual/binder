@@ -87,8 +87,7 @@ EOF;
 
       if ($needsUpdate)
       {
-        // Update artwork
-        $fetchTms->updateArtwork($artwork);
+        $fetchTms->processArtwork($artwork);
 
         $this->logSection('tms-update:', sprintf(' - Artwork: \'%s\' has been updated (%ss) (%s/%s)', $artwork->title, $timer->elapsed(), ++$count, $total));
       }

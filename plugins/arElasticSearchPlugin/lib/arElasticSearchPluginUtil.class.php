@@ -44,6 +44,22 @@ class arElasticSearchPluginUtil
     return $value;
   }
 
+  public static function parseYear($dateString)
+  {
+    // Do not use date_parse if we already have a year
+    if (strlen($dateString) === 4 && preg_match("/\d{4}/", $dateString) === 1)
+    {
+      return $dateString;
+    }
+
+    // Use date_parse but do not return empty year
+    $dateComponents = date_parse($dateString);
+    if ($dateComponents['year'])
+    {
+      return $dateComponents['year'];
+    }
+  }
+
   /**
    * Set all fields for a QueryString, removing those hidden for public users
    */

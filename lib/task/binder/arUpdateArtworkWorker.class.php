@@ -85,9 +85,8 @@ class arUpdateArtworkWorker extends Net_Gearman_Job_Common
 
     try
     {
-      // Update artwork
       $fetchTms = new arFetchTms;
-      $fetchTms->updateArtwork($artwork);
+      $fetchTms->processArtwork($artwork);
     }
     catch (Exception $e)
     {

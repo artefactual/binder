@@ -148,7 +148,8 @@ EOF
       'ARCHIVEMATICA_SS_PIPELINE_UUID' => false,
       'ARCHIVEMATICA_SS_USER' => false,
       'ARCHIVEMATICA_SS_API_KEY' => false,
-      'ATOM_DRMC_TMS_URL' => false
+      'ATOM_DRMC_TMS_URL' => false,
+      'ATOM_DRMC_TMS_VERSION' => '1',
     );
 
     foreach ($envVars as $var => $default)
@@ -169,5 +170,17 @@ EOF
     sfConfig::set('app_drmc_ss_user', $config['ARCHIVEMATICA_SS_USER']);
     sfConfig::set('app_drmc_ss_api_key', $config['ARCHIVEMATICA_SS_API_KEY']);
     sfConfig::set('app_drmc_tms_url', $config['ATOM_DRMC_TMS_URL']);
+
+    // This are not real TMS API versions, just a way to differentiate
+    // between the two current implementations.
+    $allowedTmsVersions = array('1', '2');
+    $selectedTmsVersion = (string)$config['ATOM_DRMC_TMS_VERSION'];
+    if (!in_array($selectedTmsVersion, $allowedTmsVersions))
+    {
+      throw new sfException('Unknown ATOM_DRMC_TMS_VERSION: ' . $selectedTmsVersion, 500);
+    }
+
+    // Form fetch TMS class name from TMS version
+    sfConfig::set('app_drmc_tms_class', 'arFetchTmsV' . $selectedTmsVersion);
   }
 }
