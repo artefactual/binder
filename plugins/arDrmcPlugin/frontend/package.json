@@ -13,7 +13,7 @@
     "grunt-contrib-less": "~1.0.1",
     "grunt-contrib-watch": "~0.6.0",
     "grunt-jscs": "~1.6.0",
-    "jquery": "~2.1.0",
+    "jquery": "~3.5.0",
     "jshint-stylish": "~1.0.1",
     "rickshaw": "~1.5.1",
     "wolfy87-eventemitter": "~4.2.6"
