@@ -1,5 +1,9 @@
 # Binder
 
+## Deprecation Notice
+
+This project is no longer being developed or maintained.
+
 ![Binder logo](/images/binder-logo.png)
 
 
